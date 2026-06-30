@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>LightCraft Studio</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+:root{
+  --bg:#08080F;--panel:#111118;--panel2:#181825;--panel3:#1F1F30;
+  --accent:#FF6B35;--accent2:#C8A96E;--accent3:#4FC3F7;--accent4:#A8E6CF;
+  --text:#E8E8F0;--text2:#8888A0;--text3:#44445A;
+  --border:#1E1E2E;--border2:#2A2A3E;
+  --ok:#4CAF50;--warn:#FFC107;--err:#F44336;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+  --nav-h:64px;--topbar-h:52px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:-apple-system,'SF Pro Display','Inter',system-ui,sans-serif;font-size:14px;
+  -webkit-font-smoothing:antialiased;position:fixed;width:100%;overscroll-behavior:none;
+  touch-action:manipulation}
+#sheet-content,#s-presets,#s-settings{overscroll-behavior:contain}
+/* ── TOP BAR ── */
+#topbar{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  height:calc(var(--topbar-h) + var(--safe-top));
+  padding-top:var(--safe-top);
+  background:rgba(8,8,15,0.92);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:0.5px solid var(--border2);
+  display:flex;align-items:center;padding-left:16px;padding-right:12px;gap:10px;
+}
+.logo{font-size:17px;font-weight:700;color:var(--accent);letter-spacing:-0.5px;flex:1}
+.logo em{color:var(--text2);font-style:normal;font-weight:400}
+.topbar-actions{display:flex;gap:6px}
+.icon-btn{width:36px;height:36px;border-radius:10px;border:none;background:var(--panel2);
+  color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;transition:background .12s,color .12s}
+.icon-btn:active{background:var(--panel3);color:var(--text)}
+.icon-btn.accent-active{background:rgba(255,107,53,0.2);color:var(--accent)}
+.icon-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
+/* ── SCREEN CONTAINER ── */
+#app{
+  position:fixed;
+  top:calc(var(--topbar-h) + var(--safe-top));
+  bottom:calc(var(--nav-h) + var(--safe-bot));
+  left:0;right:0;
+  overflow:hidden;
+}
+/* ── SCREENS ── */
+.screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
+.screen.active{display:flex}
+/* ── EDITOR SCREEN ── */
+#s-editor{flex-direction:column}
+/* Canvas view — takes top ~55% */
+#topdown-wrap{
+  flex:0 0 55%;position:relative;overflow:hidden;background:#0B0B16;
+}
+#canvas-topdown{display:block;touch-action:none}
+.canvas-pill{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);
+  border:0.5px solid var(--border2);
+  border-radius:20px;padding:4px 12px;
+  font-size:11px;color:var(--text3);white-space:nowrap;pointer-events:none;
+}
+.canvas-pill span{color:var(--accent2)}
+/* Floating toolbar over canvas */
+#canvas-toolbar{
+  position:absolute;top:10px;right:10px;
+  display:flex;flex-direction:column;gap:6px;
+}
+.c-btn{
+  width:34px;height:34px;border-radius:10px;border:none;
+  background:rgba(8,8,15,0.75);backdrop-filter:blur(10px);
+  border:0.5px solid var(--border2);
+  color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.c-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+.c-btn.on{color:var(--accent);border-color:rgba(255,107,53,0.4)}
+/* ── LIVE PREVIEW THUMBNAIL ── */
+#preview-thumb{
+  position:absolute;left:10px;bottom:54px;
+  width:96px;height:120px;border-radius:14px;
+  overflow:hidden;border:1.5px solid var(--border2);
+  box-shadow:0 6px 20px rgba(0,0,0,0.5);
+  cursor:pointer;background:#07070F;
+  transition:transform .12s;
+}
+#preview-thumb:active{transform:scale(0.95)}
+#canvas-preview-thumb{display:block;width:100%;height:100%}
+#preview-thumb-expand{
+  position:absolute;top:5px;right:5px;
+  width:20px;height:20px;border-radius:6px;
+  background:rgba(0,0,0,0.55);
+  display:flex;align-items:center;justify-content:center;
+  pointer-events:none;
+}
+#preview-thumb-expand svg{width:11px;height:11px;stroke:#fff;fill:none;stroke-width:2.2}
+#preview-thumb::after{
+  content:'РЕНДЕР';position:absolute;bottom:0;left:0;right:0;
+  font-size:8px;letter-spacing:0.5px;text-align:center;color:rgba(255,255,255,0.5);
+  background:rgba(0,0,0,0.5);padding:3px 0;pointer-events:none;
+}
+/* ── PREVIEW strip at bottom of canvas ── */
+#preview-strip{
+  position:absolute;bottom:0;left:0;right:0;
+  height:44px;
+  background:rgba(8,8,15,0.85);backdrop-filter:blur(10px);
+  border-top:0.5px solid var(--border2);
+  display:flex;align-items:center;padding:0 14px;gap:10px;
+}
+.ev-mini{flex:1;display:flex;align-items:center;gap:8px}
+.ev-mini-label{font-size:10px;color:var(--text3);white-space:nowrap}
+.ev-track{flex:1;height:4px;background:var(--border2);border-radius:2px;position:relative}
+.ev-track-fill{position:absolute;left:0;top:0;height:100%;
+  background:linear-gradient(90deg,#1a1a2e,var(--accent),#fff);
+  border-radius:2px;width:50%;transition:width .3s}
+.ev-track-mark{position:absolute;top:-3px;width:2px;height:10px;
+  background:rgba(255,255,255,0.8);border-radius:1px;left:50%;transform:translateX(-50%);transition:left .3s}
+.ev-val-mini{font-size:11px;font-family:monospace;color:var(--text2);min-width:44px;text-align:right}
+.scheme-tag{background:rgba(200,169,110,0.15);border:0.5px solid rgba(200,169,110,0.3);
+  border-radius:6px;padding:2px 8px;font-size:10px;color:var(--accent2);white-space:nowrap}
+
+/* ── BOTTOM SHEET / PROPERTIES ── */
+#bottom-sheet{
+  flex:1;display:flex;flex-direction:column;overflow:hidden;
+  background:var(--panel);border-top:0.5px solid var(--border2);
+}
+/* Tab switcher inside sheet */
+#sheet-tabs{
+  display:flex;border-bottom:0.5px solid var(--border);flex-shrink:0;
+  padding:0 4px;
+}
+.sheet-tab{
+  flex:1;padding:11px 4px 10px;text-align:center;font-size:12px;
+  color:var(--text3);cursor:pointer;position:relative;
+  border:none;background:none;
+}
+.sheet-tab.active{color:var(--accent);font-weight:600}
+.sheet-tab.active::after{
+  content:'';position:absolute;bottom:0;left:20%;right:20%;
+  height:2px;background:var(--accent);border-radius:2px 2px 0 0;
+}
+#sheet-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+/* Panels */
+.tab-pane{display:none;padding:14px 16px 20px}
+.tab-pane.active{display:block}
+/* Light list */
+.light-card{
+  display:flex;align-items:center;gap:12px;
+  padding:12px;margin-bottom:8px;
+  background:var(--panel2);border-radius:12px;
+  border:1px solid var(--border);
+  transition:border-color .15s;
+  cursor:pointer;
+}
+.light-card.selected{border-color:var(--accent)}
+.light-color-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.light-info{flex:1;min-width:0}
+.light-info-name{font-size:13px;font-weight:600;color:var(--text)}
+.light-info-sub{font-size:11px;color:var(--text3);margin-top:1px;font-family:monospace}
+.light-badge{font-size:10px;padding:2px 7px;border-radius:5px;
+  background:var(--panel3);color:var(--text2);flex-shrink:0}
+/* Toggle switch */
+.toggle{width:40px;height:22px;border-radius:11px;background:var(--border2);
+  position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--accent)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;
+  width:18px;height:18px;border-radius:50%;background:#fff;
+  transition:transform .2s}
+.toggle.on::after{transform:translateX(18px)}
+/* Add light btn */
+.add-light-row{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:13px;margin-top:4px;
+  border:1px dashed var(--border2);border-radius:12px;
+  color:var(--accent);font-size:13px;cursor:pointer;
+}
+.add-light-row svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.5}
+/* ── LIGHT PARAMS ── */
+.params-header{
+  display:flex;align-items:center;gap:10px;margin-bottom:16px;
+}
+.params-color-swatch{width:10px;height:28px;border-radius:5px;flex-shrink:0}
+.params-title{font-size:15px;font-weight:700;flex:1}
+.params-type{font-size:11px;color:var(--text3)}
+.no-selection{text-align:center;padding:32px 20px;color:var(--text3);font-size:13px}
+.no-selection svg{width:40px;height:40px;stroke:currentColor;fill:none;stroke-width:1;opacity:0.3;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto}
+/* Sliders */
+.param-group{margin-bottom:16px}
+.param-group-label{font-size:10px;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px}
+.param-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.param-name{font-size:12px;color:var(--text2);width:78px;flex-shrink:0}
+.param-slider{
+  flex:1;height:4px;border-radius:2px;-webkit-appearance:none;appearance:none;
+  background:var(--border2);outline:none;cursor:pointer;
+}
+.param-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:22px;height:22px;border-radius:50%;
+  background:var(--accent);box-shadow:0 2px 8px rgba(255,107,53,0.4);cursor:pointer;
+}
+.param-slider::-moz-range-thumb{
+  width:22px;height:22px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;
+}
+.param-val{font-size:12px;font-family:monospace;color:var(--accent2);
+  min-width:52px;text-align:right}
+/* Modifier grid */
+.mod-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.mod-card{
+  padding:10px 6px;border-radius:10px;border:1px solid var(--border);
+  background:var(--panel2);cursor:pointer;text-align:center;transition:all .12s;
+}
+.mod-card.selected{border-color:var(--accent);background:rgba(255,107,53,0.1)}
+.mod-card-icon{font-size:20px;margin-bottom:4px}
+.mod-card-name{font-size:10px;color:var(--text2);line-height:1.3}
+/* ── CAMERA TAB ── */
+.cam-section{margin-bottom:20px}
+.cam-section-title{font-size:10px;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px}
+.ct-strip{height:8px;border-radius:4px;
+  background:linear-gradient(90deg,#4169E1,#87CEEB,#fff,#FFD700,#FF8C00);
+  margin-bottom:4px}
+/* Stats grid */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.stat-card{background:var(--panel2);border-radius:10px;padding:12px;border:0.5px solid var(--border)}
+.stat-card-label{font-size:10px;color:var(--text3);margin-bottom:4px}
+.stat-card-val{font-size:18px;font-family:monospace;font-weight:700;color:var(--text)}
+.stat-card-val.ok{color:var(--ok)}
+.stat-card-val.warn{color:var(--warn)}
+.stat-card-val.err{color:var(--err)}
+/* Histogram */
+#histogram{width:100%;height:64px;border-radius:8px;display:block;background:var(--panel2)}
+.hist-labels{display:flex;justify-content:space-between;margin-top:4px}
+.hist-labels span{font-size:10px;color:var(--text3)}
+/* ── PRESETS SCREEN ── */
+#s-presets{overflow-y:auto;-webkit-overflow-scrolling:touch}
+.presets-header{padding:20px 16px 12px;font-size:22px;font-weight:700}
+.presets-header em{color:var(--text2);font-style:normal;font-size:14px;font-weight:400;display:block;margin-top:4px}
+.preset-section-title{font-size:10px;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:0.8px;padding:0 16px;margin-bottom:8px;margin-top:16px}
+.preset-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px}
+.preset-card{
+  background:var(--panel2);border-radius:14px;padding:16px;
+  border:1px solid var(--border);cursor:pointer;transition:all .15s;
+  position:relative;overflow:hidden;
+}
+.preset-card.active{border-color:var(--accent)}
+.preset-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--accent);opacity:0;transition:opacity .15s}
+.preset-card.active::before{opacity:1}
+.preset-card-icon{font-size:26px;margin-bottom:8px}
+.preset-card-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px}
+.preset-card-desc{font-size:11px;color:var(--text3);line-height:1.4}
+.preset-card-lights{font-size:10px;color:var(--accent2);margin-top:6px;font-family:monospace}
+/* ── SETTINGS SCREEN ── */
+#s-settings{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px}
+.settings-section{margin-bottom:24px}
+.settings-section-title{font-size:10px;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px}
+.settings-row{
+  display:flex;align-items:center;padding:14px;
+  background:var(--panel2);border-radius:10px;margin-bottom:6px;
+}
+.settings-row-icon{width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;margin-right:12px;flex-shrink:0}
+.settings-row-icon svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.settings-row-text{flex:1}
+.settings-row-title{font-size:13px;color:var(--text);font-weight:500}
+.settings-row-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.settings-row-right{color:var(--text3)}
+.settings-row-right svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+/* ── BOTTOM NAVIGATION ── */
+#bottomnav{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  height:calc(var(--nav-h) + var(--safe-bot));
+  padding-bottom:var(--safe-bot);
+  background:rgba(8,8,15,0.94);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-top:0.5px solid var(--border2);
+  display:flex;align-items:flex-start;padding-top:6px;
+}
+.nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  gap:3px;cursor:pointer;padding:6px 0;
+  color:var(--text3);transition:color .15s;border:none;background:none;
+}
+.nav-item.active{color:var(--accent)}
+.nav-item svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7}
+.nav-item.active svg{stroke:var(--accent)}
+.nav-label{font-size:10px;font-weight:500}
+/* FAB — add light */
+#fab{
+  position:fixed;right:16px;z-index:200;
+  width:52px;height:52px;border-radius:16px;
+  background:var(--accent);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px rgba(255,107,53,0.4);
+  transition:transform .15s;
+}
+#fab:active{transform:scale(0.93)}
+#fab svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:2.5}
+/* ── BOTTOM SHEETS (MODAL) ── */
+.sheet-overlay{
+  position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,0.6);
+  backdrop-filter:blur(4px);
+  display:none;align-items:flex-end;
+}
+.sheet-overlay.show{display:flex}
+.bottom-modal{
+  width:100%;
+  background:var(--panel);
+  border-radius:20px 20px 0 0;
+  padding-bottom:calc(20px + var(--safe-bot));
+  max-height:85vh;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  animation:slideUp .28s cubic-bezier(0.4,0,0.2,1);
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:36px;height:4px;border-radius:2px;
+  background:var(--border2);margin:12px auto 16px}
+.modal-title{font-size:17px;font-weight:700;padding:0 20px;margin-bottom:16px}
+/* Light type grid */
+.light-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 16px;margin-bottom:16px}
+.lt-card{
+  padding:16px 8px;border-radius:12px;border:1px solid var(--border);
+  background:var(--panel2);cursor:pointer;text-align:center;transition:all .15s;
+}
+.lt-card.selected{border-color:var(--accent);background:rgba(255,107,53,0.1)}
+.lt-card-icon{font-size:26px;margin-bottom:6px}
+.lt-card-name{font-size:11px;color:var(--text2)}
+.modal-section{padding:0 16px;margin-bottom:14px}
+.modal-section-label{font-size:12px;color:var(--text2);margin-bottom:6px}
+.seg-control{display:flex;background:var(--panel3);border-radius:10px;padding:3px;gap:3px}
+.seg-btn{flex:1;padding:8px 4px;border-radius:8px;border:none;background:none;
+  font-size:12px;color:var(--text3);cursor:pointer;transition:all .15s}
+.seg-btn.active{background:var(--panel);color:var(--text);font-weight:600}
+.modal-actions{display:flex;gap:10px;padding:0 16px}
+.btn{padding:14px;border-radius:12px;border:none;cursor:pointer;font-size:14px;
+  font-weight:600;transition:all .15s;flex:1;text-align:center}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:active{filter:brightness(1.1)}
+.btn-ghost{background:var(--panel2);color:var(--text2);border:1px solid var(--border)}
+/* ── PREVIEW OVERLAY (fullscreen 3D) ── */
+#preview-overlay{
+  position:fixed;inset:0;z-index:500;background:#000;
+  display:none;flex-direction:column;
+}
+#preview-overlay.show{display:flex}
+#preview3d-container{position:absolute;inset:0;touch-action:none}
+#preview3d-container canvas{display:block;width:100%!important;height:100%!important}
+#preview-overlay-topbar{
+  position:absolute;top:calc(12px + var(--safe-top));left:12px;right:12px;
+  display:flex;align-items:center;justify-content:space-between;z-index:10;
+}
+#preview-overlay-close,#preview-overlay-reset{
+  width:38px;height:38px;border-radius:19px;
+  background:rgba(0,0,0,0.55);backdrop-filter:blur(10px);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;color:#fff;
+}
+#preview-overlay-close svg,#preview-overlay-reset svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
+.preview-overlay-ev{
+  background:rgba(0,0,0,0.55);backdrop-filter:blur(10px);
+  border-radius:18px;padding:8px 16px;font-size:13px;font-family:monospace;
+  color:#fff;font-weight:600;
+}
+.preview-rotate-hint{
+  position:absolute;bottom:calc(28px + var(--safe-bot));left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,0.6);border-radius:10px;padding:6px 14px;
+  font-size:12px;color:rgba(255,255,255,0.65);pointer-events:none;white-space:nowrap;
+  animation:fadeOut 3.5s 2s forwards;z-index:10;
+}
+/* Zoom indicator */
+.zoom-indicator{
+  position:absolute;bottom:calc(var(--nav-h)+var(--safe-bot)+8px);left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,0.7);border-radius:8px;padding:3px 10px;
+  font-size:11px;color:var(--text2);font-family:monospace;
+  pointer-events:none;opacity:0;transition:opacity .3s;
+}
+.zoom-indicator.show{opacity:1}
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:0;height:0}
+/* ── TOUCH DRAG HINT ── */
+.drag-hint{
+  position:absolute;bottom:52px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,0.7);border-radius:8px;padding:4px 10px;
+  font-size:11px;color:rgba(255,255,255,0.6);pointer-events:none;
+  white-space:nowrap;
+  animation:fadeOut 3s 1.5s forwards;
+}
+@keyframes fadeOut{0%{opacity:1}100%{opacity:0}}
+/* ── EV colours ── */
+.ev-ok{color:rgba(255,255,255,0.5)}
+.ev-over{color:var(--err)}
+.ev-under{color:var(--warn)}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">Light<em>Craft</em></div>
+  <div class="topbar-actions">
+    <button class="icon-btn" id="grid-btn" onclick="toggleGrid()" title="Сетка">
+      <svg viewBox="0 0 24 24"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+    </button>
+    <button class="icon-btn" onclick="resetView()" title="Центрировать">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+    </button>
+    <button class="icon-btn" onclick="showPreviewFull()" title="Превью">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M6 21v-1a6 6 0 0 1 12 0v1"/></svg>
+    </button>
+    <button class="icon-btn" onclick="exportSetup()" title="Экспорт">
+      <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+
+  <!-- ── EDITOR SCREEN ── -->
+  <div class="screen active" id="s-editor">
+    <!-- Top-down canvas -->
+    <div id="topdown-wrap">
+      <canvas id="canvas-topdown"></canvas>
+      <div class="canvas-pill" id="canvas-pill">Вид сверху · <span id="preset-pill-name">Rembrandt</span></div>
+      <div id="canvas-toolbar">
+        <button class="c-btn on" id="grid-c-btn" onclick="toggleGrid()">
+          <svg viewBox="0 0 24 24"><path d="M3 3h18v18H3zM9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
+        </button>
+        <button class="c-btn" onclick="resetView()">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        </button>
+        <button class="c-btn" onclick="zoomIn()">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/></svg>
+        </button>
+        <button class="c-btn" onclick="zoomOut()">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M8 11h6"/></svg>
+        </button>
+      </div>
+      <!-- Live preview thumbnail -->
+      <div id="preview-thumb" onclick="showPreviewFull()">
+        <canvas id="canvas-preview-thumb"></canvas>
+        <div id="preview-thumb-expand">
+          <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg>
+        </div>
+      </div>
+      <!-- EV strip at bottom of canvas -->
+      <div id="preview-strip">
+        <div class="ev-mini">
+          <div class="ev-mini-label">EV</div>
+          <div class="ev-track">
+            <div class="ev-track-fill" id="ev-fill"></div>
+            <div class="ev-track-mark" id="ev-mark"></div>
+          </div>
+          <div class="ev-val-mini ev-ok" id="ev-val">0.0</div>
+        </div>
+        <div class="scheme-tag" id="scheme-tag">Rembrandt</div>
+      </div>
+      <div class="drag-hint" id="drag-hint">Перетащите фонари · Зажмите для удаления</div>
+      <div class="zoom-indicator" id="zoom-ind">100%</div>
+    </div>
+
+    <!-- Bottom sheet -->
+    <div id="bottom-sheet">
+      <div id="sheet-tabs">
+        <button class="sheet-tab active" onclick="setSheetTab('lights')">Фонари</button>
+        <button class="sheet-tab" onclick="setSheetTab('params')">Параметры</button>
+        <button class="sheet-tab" onclick="setSheetTab('camera')">Камера</button>
+        <button class="sheet-tab" onclick="setSheetTab('info')">Анализ</button>
+      </div>
+      <div id="sheet-content">
+        <!-- LIGHTS TAB -->
+        <div class="tab-pane active" id="tab-lights">
+          <div id="lights-list"></div>
+          <div class="add-light-row" onclick="showAddLight()">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Добавить источник света
+          </div>
+        </div>
+        <!-- PARAMS TAB -->
+        <div class="tab-pane" id="tab-params">
+          <div id="no-light-msg" class="no-selection">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+            Выберите источник света<br>на схеме или в списке
+          </div>
+          <div id="light-params-pane" style="display:none">
+            <div class="params-header">
+              <div class="params-color-swatch" id="params-swatch"></div>
+              <div>
+                <div class="params-title" id="params-light-name">—</div>
+                <div class="params-type" id="params-light-type">—</div>
+              </div>
+              <div class="toggle" id="params-toggle" onclick="toggleSelectedLight()"></div>
+            </div>
+            <div class="param-group">
+              <div class="param-group-label">Мощность и позиция</div>
+              <div class="param-row">
+                <div class="param-name">Мощность</div>
+                <input type="range" class="param-slider" id="p-power" min="50" max="1200" step="50" oninput="updateLP('power',this.value)">
+                <div class="param-val" id="pv-power">400Вт</div>
+              </div>
+              <div class="param-row">
+                <div class="param-name">Расстояние</div>
+                <input type="range" class="param-slider" id="p-dist" min="50" max="500" oninput="updateLP('dist',this.value/100)">
+                <div class="param-val" id="pv-dist">2.0м</div>
+              </div>
+              <div class="param-row">
+                <div class="param-name">Высота</div>
+                <input type="range" class="param-slider" id="p-height" min="50" max="300" oninput="updateLP('height',this.value)">
+                <div class="param-val" id="pv-height">180см</div>
+              </div>
+              <div class="param-row">
+                <div class="param-name">Наклон</div>
+                <input type="range" class="param-slider" id="p-tilt" min="-90" max="90" oninput="updateLP('tilt',this.value)">
+                <div class="param-val" id="pv-tilt">-30°</div>
+              </div>
+              <div class="param-row">
+                <div class="param-name">Угол</div>
+                <input type="range" class="param-slider" id="p-angle" min="0" max="359" oninput="updateLP('angle',this.value)">
+                <div class="param-val" id="pv-angle">315°</div>
+              </div>
+            </div>
+            <div class="param-group">
+              <div class="param-group-label">Цвет и температура</div>
+              <div class="param-row">
+                <div class="param-name">Цвет. темп.</div>
+                <input type="range" class="param-slider" id="p-ct" min="2000" max="10000" step="100" oninput="updateLP('colorTemp',this.value)">
+                <div class="param-val" id="pv-ct">5600K</div>
+              </div>
+              <div class="ct-strip" style="margin-bottom:12px"></div>
+            </div>
+            <div class="param-group">
+              <div class="param-group-label">Модификатор</div>
+              <div class="mod-grid" id="mod-grid"></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button class="btn btn-ghost" style="flex:1" onclick="duplicateSelected()">Дублировать</button>
+              <button class="btn" style="flex:1;background:rgba(244,67,54,0.15);color:#F44336" onclick="deleteSelected()">Удалить</button>
+            </div>
+          </div>
+        </div>
+        <!-- CAMERA TAB -->
+        <div class="tab-pane" id="tab-camera">
+          <div class="cam-section">
+            <div class="cam-section-title">Экспозиция</div>
+            <div class="param-row">
+              <div class="param-name">ISO</div>
+              <input type="range" class="param-slider" id="c-iso" min="0" max="8" oninput="updateCam('iso',this.value)">
+              <div class="param-val" id="cv-iso">100</div>
+            </div>
+            <div class="param-row">
+              <div class="param-name">Диафрагма</div>
+              <input type="range" class="param-slider" id="c-ap" min="0" max="10" oninput="updateCam('aperture',this.value)">
+              <div class="param-val" id="cv-ap">f/8</div>
+            </div>
+            <div class="param-row">
+              <div class="param-name">Выдержка</div>
+              <input type="range" class="param-slider" id="c-sh" min="0" max="10" oninput="updateCam('shutter',this.value)">
+              <div class="param-val" id="cv-sh">1/125</div>
+            </div>
+          </div>
+          <div class="cam-section">
+            <div class="cam-section-title">Баланс белого</div>
+            <div class="ct-strip" style="margin-bottom:10px"></div>
+            <div class="param-row">
+              <div class="param-name">Температура</div>
+              <input type="range" class="param-slider" id="c-wb" min="2000" max="10000" step="100" oninput="updateCam('wb',this.value)">
+              <div class="param-val" id="cv-wb">5500K</div>
+            </div>
+          </div>
+          <div class="cam-section">
+            <div class="cam-section-title">Субъект</div>
+            <div class="seg-control" style="margin-bottom:10px">
+              <button class="seg-btn" onclick="setSeg(this,'type','head')">Голова</button>
+              <button class="seg-btn active" onclick="setSeg(this,'type','half')">Полуфигура</button>
+              <button class="seg-btn" onclick="setSeg(this,'type','full')">Полный рост</button>
+            </div>
+            <div class="seg-control" style="margin-bottom:10px">
+              <button class="seg-btn active" onclick="setSeg(this,'gender','female')">Женщина</button>
+              <button class="seg-btn" onclick="setSeg(this,'gender','male')">Мужчина</button>
+            </div>
+            <div class="seg-control">
+              <button class="seg-btn active" onclick="setSeg(this,'skin','light')">Светлая</button>
+              <button class="seg-btn" onclick="setSeg(this,'skin','medium')">Средняя</button>
+              <button class="seg-btn" onclick="setSeg(this,'skin','dark')">Тёмная</button>
+            </div>
+          </div>
+        </div>
+        <!-- INFO TAB -->
+        <div class="tab-pane" id="tab-info">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-card-label">Экспозиция</div>
+              <div class="stat-card-val" id="info-ev">0.0 EV</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Соотношение</div>
+              <div class="stat-card-val" id="info-ratio">3:1</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Мягкость теней</div>
+              <div class="stat-card-val" id="info-soft">68%</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Цвет. темп.</div>
+              <div class="stat-card-val" id="info-ct">5600K</div>
+            </div>
+          </div>
+          <div class="cam-section-title" style="margin-bottom:10px">Гистограмма</div>
+          <canvas id="histogram"></canvas>
+          <div class="hist-labels">
+            <span>Тени <strong id="hi-sh">22%</strong></span>
+            <span>Средние <strong id="hi-mid">58%</strong></span>
+            <span>Света <strong id="hi-hi">20%</strong></span>
+          </div>
+          <div class="cam-section-title" style="margin:16px 0 10px">Catchlights</div>
+          <canvas id="canvas-catchlight" style="width:100%;height:80px;border-radius:10px;display:block;background:#0A0A14"></canvas>
+          <div class="cam-section-title" style="margin:16px 0 10px">Рекомендации</div>
+          <div id="recommendations" style="font-size:13px;color:var(--text2);line-height:1.7"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PRESETS SCREEN ── -->
+  <div class="screen" id="s-presets">
+    <div class="presets-header">
+      Пресеты освещения
+      <em>Выберите готовую схему и настройте под себя</em>
+    </div>
+    <div class="preset-section-title">Портрет</div>
+    <div class="preset-cards" id="preset-cards-portrait"></div>
+    <div class="preset-section-title">Студийные</div>
+    <div class="preset-cards" id="preset-cards-studio"></div>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ── SETTINGS SCREEN ── -->
+  <div class="screen" id="s-settings">
+    <div style="font-size:22px;font-weight:700;margin-bottom:20px">Настройки</div>
+    <div class="settings-section">
+      <div class="settings-section-title">Вид</div>
+      <div class="settings-row">
+        <div class="settings-row-icon" style="background:rgba(255,107,53,0.15);color:var(--accent)"><svg viewBox="0 0 24 24"><path d="M3 3h18v18H3zM9 3v18M15 3v18M3 9h18M3 15h18"/></svg></div>
+        <div class="settings-row-text"><div class="settings-row-title">Сетка</div><div class="settings-row-sub">Показывать метрическую сетку</div></div>
+        <div class="toggle on" id="grid-setting-toggle" onclick="toggleGrid()"></div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-icon" style="background:rgba(79,195,247,0.15);color:var(--accent3)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></div>
+        <div class="settings-row-text"><div class="settings-row-title">Catchlights</div><div class="settings-row-sub">Отображать в превью</div></div>
+        <div class="toggle on" id="catch-toggle" onclick="toggleCatchlight()"></div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Экспорт</div>
+      <div class="settings-row" onclick="exportSetup()" style="cursor:pointer">
+        <div class="settings-row-icon" style="background:rgba(200,169,110,0.15);color:var(--accent2)"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></div>
+        <div class="settings-row-text"><div class="settings-row-title">Сохранить JSON</div><div class="settings-row-sub">Экспортировать схему освещения</div></div>
+        <div class="settings-row-right"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">О программе</div>
+      <div class="settings-row">
+        <div class="settings-row-icon" style="background:rgba(255,107,53,0.15);color:var(--accent)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
+        <div class="settings-row-text"><div class="settings-row-title">LightCraft Studio</div><div class="settings-row-sub">Симулятор студийного освещения · v1.0</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAB -->
+<button id="fab" onclick="showAddLight()">
+  <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<!-- BOTTOM NAV -->
+<div id="bottomnav">
+  <button class="nav-item active" id="nav-editor" onclick="setScreen('editor')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg>
+    <span class="nav-label">Редактор</span>
+  </button>
+  <button class="nav-item" id="nav-presets" onclick="setScreen('presets')">
+    <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    <span class="nav-label">Пресеты</span>
+  </button>
+  <button class="nav-item" id="nav-settings" onclick="setScreen('settings')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+    <span class="nav-label">Настройки</span>
+  </button>
+</div>
+
+<!-- ADD LIGHT MODAL -->
+<div class="sheet-overlay" id="add-light-overlay" onclick="closeOverlay('add-light-overlay',event)">
+  <div class="bottom-modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Добавить свет</div>
+    <div class="light-type-grid" id="lt-grid">
+      <div class="lt-card selected" data-type="strobe" onclick="pickLT(this)"><div class="lt-card-icon">⚡</div><div class="lt-card-name">Вспышка</div></div>
+      <div class="lt-card" data-type="led" onclick="pickLT(this)"><div class="lt-card-icon">💡</div><div class="lt-card-name">LED</div></div>
+      <div class="lt-card" data-type="speedlight" onclick="pickLT(this)"><div class="lt-card-icon">📷</div><div class="lt-card-name">Speedlight</div></div>
+      <div class="lt-card" data-type="fresnel" onclick="pickLT(this)"><div class="lt-card-icon">🔦</div><div class="lt-card-name">Fresnel</div></div>
+      <div class="lt-card" data-type="ringlight" onclick="pickLT(this)"><div class="lt-card-icon">⭕</div><div class="lt-card-name">Ring Light</div></div>
+      <div class="lt-card" data-type="barebulb" onclick="pickLT(this)"><div class="lt-card-icon">🕯️</div><div class="lt-card-name">Bare Bulb</div></div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-label">Мощность</div>
+      <div class="seg-control" id="power-seg">
+        <button class="seg-btn" onclick="pickSeg(this,'newPower','100')">100Вт</button>
+        <button class="seg-btn" onclick="pickSeg(this,'newPower','200')">200Вт</button>
+        <button class="seg-btn active" onclick="pickSeg(this,'newPower','400')">400Вт</button>
+        <button class="seg-btn" onclick="pickSeg(this,'newPower','600')">600Вт</button>
+      </div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-label">Модификатор</div>
+      <div class="seg-control" id="mod-seg">
+        <button class="seg-btn active" onclick="pickSeg(this,'newMod','none')">Голый</button>
+        <button class="seg-btn" onclick="pickSeg(this,'newMod','softbox60')">Softbox</button>
+        <button class="seg-btn" onclick="pickSeg(this,'newMod','octabox90')">Octabox</button>
+        <button class="seg-btn" onclick="pickSeg(this,'newMod','umbrella-wt')">Зонт</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeOverlay('add-light-overlay')">Отмена</button>
+      <button class="btn btn-primary" onclick="addLightConfirm()">Добавить ⚡</button>
+    </div>
+    <div style="height:8px"></div>
+  </div>
+</div>
+
+<!-- FULLSCREEN PREVIEW -->
+<div id="preview-overlay">
+  <div id="preview3d-container"></div>
+  <div id="preview-overlay-topbar">
+    <button id="preview-overlay-close" onclick="hidePreviewFull()">
+      <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="preview-overlay-ev" id="preview-overlay-ev">0.0 EV</div>
+    <button id="preview-overlay-reset" onclick="reset3DCamera()">
+      <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+    </button>
+  </div>
+  <div class="preview-rotate-hint" id="preview-rotate-hint">Вращайте пальцем · Pinch для зума</div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+const isoVals=[50,100,200,400,800,1600,3200,6400,12800];
+const apVals=[1.2,1.4,1.8,2,2.8,4,5.6,8,11,16,22];
+const shVals=['1/8000','1/4000','1/2000','1/1000','1/500','1/250','1/125','1/60','1/30','1/15','1/8'];
+
+let S={
+  lights:[],selectedId:null,
+  cam:{iso:1,aperture:7,shutter:6,wb:5500},
+  sub:{type:'half',gender:'female',skin:'medium',catchlight:true},
+  view:{zoom:1,panX:0,panY:0},
+  grid:true,nextId:1,
+  currentPreset:'rembrandt',
+  newPower:400,newMod:'none',newLT:'strobe',
+  activeScreen:'editor',activeTab:'lights',
+};
+
+const COLORS=['#FF6B35','#4FC3F7','#A8E6CF','#FFD93D','#FF8FA3','#B39DDB','#80DEEA','#FFCC80'];
+const MOD_SPREAD={none:25,softbox60:60,softbox90:70,octabox90:75,octabox120:80,stripbox:30,
+  'umbrella-wt':90,'umbrella-silver':85,'umbrella-para':88,'beauty-dish':45,snoot:10,ringlight:60,fresnel:15};
+const MOD_SOFT={none:0.1,softbox60:0.8,softbox90:0.85,octabox90:0.82,octabox120:0.88,stripbox:0.6,
+  'umbrella-wt':0.9,'umbrella-silver':0.75,'umbrella-para':0.85,'beauty-dish':0.5,snoot:0.05,ringlight:0.7,fresnel:0.15};
+const MOD_LIST=[
+  {id:'none',icon:'💥',name:'Голый'},
+  {id:'softbox60',icon:'⬛',name:'Softbox 60'},
+  {id:'softbox90',icon:'▬',name:'Softbox 90'},
+  {id:'octabox90',icon:'⬡',name:'Octabox 90'},
+  {id:'octabox120',icon:'⬢',name:'Octabox 120'},
+  {id:'stripbox',icon:'▌',name:'Stripbox'},
+  {id:'umbrella-wt',icon:'☂',name:'Зонт просв.'},
+  {id:'umbrella-silver',icon:'🌂',name:'Зонт серебро'},
+  {id:'beauty-dish',icon:'⭕',name:'Beauty Dish'},
+  {id:'snoot',icon:'🔺',name:'Сноут'},
+  {id:'ringlight',icon:'💫',name:'Ring Light'},
+  {id:'fresnel',icon:'🔦',name:'Fresnel'},
+];
+
+const PRESETS={
+  rembrandt:{name:'Rembrandt',icon:'🎭',desc:'Треугольник на щеке',cat:'portrait',lights:[
+    {angle:315,dist:2.2,power:600,modifier:'octabox90',height:200,tilt:-35,colorTemp:5600},
+    {angle:180,dist:2.8,power:200,modifier:'umbrella-silver',height:160,tilt:-15,colorTemp:5600}]},
+  butterfly:{name:'Butterfly',icon:'🦋',desc:'Тень под носом',cat:'portrait',lights:[
+    {angle:0,dist:1.8,power:500,modifier:'softbox90',height:220,tilt:-45,colorTemp:5500},
+    {angle:180,dist:2.5,power:150,modifier:'umbrella-wt',height:120,tilt:10,colorTemp:5500}]},
+  loop:{name:'Loop',icon:'🔄',desc:'Петля тени носа',cat:'portrait',lights:[
+    {angle:340,dist:2.0,power:500,modifier:'softbox60',height:190,tilt:-30,colorTemp:5600},
+    {angle:190,dist:2.5,power:180,modifier:'umbrella-wt',height:150,tilt:-10,colorTemp:5600}]},
+  split:{name:'Split',icon:'⬛',desc:'Половина лица в тени',cat:'portrait',lights:[
+    {angle:270,dist:1.8,power:600,modifier:'beauty-dish',height:180,tilt:-20,colorTemp:5600}]},
+  clamshell:{name:'Clamshell',icon:'🐚',desc:'Верх и низ — без теней',cat:'portrait',lights:[
+    {angle:0,dist:1.6,power:400,modifier:'octabox90',height:200,tilt:-40,colorTemp:5600},
+    {angle:0,dist:1.5,power:200,modifier:'stripbox',height:80,tilt:30,colorTemp:5600}]},
+  highkey:{name:'High Key',icon:'☀️',desc:'Яркий фон, мягкие тени',cat:'studio',lights:[
+    {angle:340,dist:2.0,power:400,modifier:'octabox120',height:190,tilt:-25,colorTemp:5500},
+    {angle:20,dist:2.0,power:350,modifier:'octabox120',height:190,tilt:-25,colorTemp:5500},
+    {angle:180,dist:3.5,power:600,modifier:'umbrella-wt',height:160,tilt:-10,colorTemp:5500}]},
+  lowkey:{name:'Low Key',icon:'🌑',desc:'Глубокие тени, контраст',cat:'studio',lights:[
+    {angle:305,dist:2.2,power:800,modifier:'snoot',height:200,tilt:-40,colorTemp:4500}]},
+  threepoint:{name:'Три точки',icon:'💡',desc:'Классическая схема',cat:'studio',lights:[
+    {angle:315,dist:2.0,power:400,modifier:'softbox60',height:180,tilt:-30,colorTemp:5600},
+    {angle:225,dist:2.5,power:200,modifier:'umbrella-wt',height:160,tilt:-15,colorTemp:5600},
+    {angle:45,dist:2.8,power:300,modifier:'none',height:200,tilt:-20,colorTemp:5800}]},
+};
+
+// ════════════════════════════════════════════
+// CANVAS
+// ════════════════════════════════════════════
+const cv=document.getElementById('canvas-topdown');
+const cx2=cv.getContext('2d');
+const catchCv=document.getElementById('canvas-catchlight');
+const ccx=catchCv.getContext('2d');
+const histCv=document.getElementById('histogram');
+const hcx=histCv.getContext('2d');
+const thumbCv=document.getElementById('canvas-preview-thumb');
+const tcx=thumbCv.getContext('2d');
+
+function resizeAll(){
+  const wrap=document.getElementById('topdown-wrap');
+  cv.width=wrap.clientWidth;cv.height=wrap.clientHeight;
+  histCv.width=histCv.clientWidth||histCv.offsetWidth||300;
+  histCv.height=64;
+  catchCv.width=catchCv.clientWidth||catchCv.offsetWidth||300;
+  catchCv.height=80;
+  const tw=document.getElementById('preview-thumb');
+  thumbCv.width=tw.clientWidth*2;thumbCv.height=tw.clientHeight*2;
+  drawAll();
+}
+
+// ════════════════════════════════════════════
+// COORDINATES
+// ════════════════════════════════════════════
+const STUDIO_M=6;
+function m2px(m){return m*(Math.min(cv.width,cv.height)/STUDIO_M*S.view.zoom)}
+function s2c(mx,my){
+  const cx=cv.width/2+S.view.panX,cy=cv.height/2+S.view.panY;
+  const sc=Math.min(cv.width,cv.height)/STUDIO_M*S.view.zoom;
+  return{x:cx+mx*sc,y:cy-my*sc};
+}
+function c2s(px,py){
+  const cx=cv.width/2+S.view.panX,cy=cv.height/2+S.view.panY;
+  const sc=Math.min(cv.width,cv.height)/STUDIO_M*S.view.zoom;
+  return{x:(px-cx)/sc,y:-(py-cy)/sc};
+}
+function getLPos(l){const r=l.angle*Math.PI/180;return{x:Math.sin(r)*l.dist,y:Math.cos(r)*l.dist}}
+
+// ════════════════════════════════════════════
+// TOP-DOWN DRAW
+// ════════════════════════════════════════════
+function drawTopDown(){
+  cx2.clearRect(0,0,cv.width,cv.height);
+  cx2.fillStyle='#0B0B16';cx2.fillRect(0,0,cv.width,cv.height);
+
+  if(S.grid){
+    const drawGridLines=(step,alpha)=>{
+      cx2.strokeStyle=`rgba(255,255,255,${alpha})`;cx2.lineWidth=0.5;
+      const gx=cv.width/2+S.view.panX,gy=cv.height/2+S.view.panY;
+      const px=gx%step,py=gy%step;
+      cx2.beginPath();
+      for(let x=px;x<cv.width;x+=step){cx2.moveTo(x,0);cx2.lineTo(x,cv.height)}
+      for(let y=py;y<cv.height;y+=step){cx2.moveTo(0,y);cx2.lineTo(cv.width,y)}
+      cx2.stroke();
+    };
+    drawGridLines(m2px(0.5),0.04);
+    drawGridLines(m2px(1),0.09);
+  }
+
+  // Backdrop
+  const sp=s2c(0,0);
+  const bh=m2px(1.5);
+  cx2.fillStyle='rgba(255,255,255,0.02)';
+  cx2.fillRect(sp.x-bh,sp.y-m2px(0.3),bh*2,m2px(0.6));
+  cx2.strokeStyle='rgba(255,255,255,0.07)';cx2.setLineDash([4,4]);cx2.lineWidth=1;
+  cx2.strokeRect(sp.x-bh,sp.y-m2px(0.3),bh*2,m2px(0.6));
+  cx2.setLineDash([]);
+
+  // Beams
+  S.lights.forEach(l=>{
+    if(!l.enabled)return;
+    const lp=getLPos(l),lc=s2c(lp.x,lp.y),sc=s2c(0,0);
+    const spd=MOD_SPREAD[l.modifier]||35;
+    const inten=Math.min(1,(l.power/(l.dist*l.dist*100))*0.4);
+    const ba=(spd/2)*Math.PI/180;
+    const dx=sc.x-lc.x,dy=sc.y-lc.y;
+    const ang=Math.atan2(dy,dx);
+    const blen=Math.sqrt(dx*dx+dy*dy)*1.3;
+    const col=ct2rgb(l.colorTemp);
+    const g=cx2.createLinearGradient(lc.x,lc.y,sc.x,sc.y);
+    g.addColorStop(0,`rgba(${col},${inten*0.55})`);
+    g.addColorStop(0.6,`rgba(${col},${inten*0.15})`);
+    g.addColorStop(1,`rgba(${col},0)`);
+    cx2.beginPath();
+    cx2.moveTo(lc.x,lc.y);
+    cx2.lineTo(lc.x+Math.cos(ang-ba)*blen,lc.y+Math.sin(ang-ba)*blen);
+    cx2.lineTo(lc.x+Math.cos(ang+ba)*blen,lc.y+Math.sin(ang+ba)*blen);
+    cx2.closePath();cx2.fillStyle=g;cx2.fill();
+  });
+
+  // Subject
+  drawSubjectTopDown(sp);
+
+  // Camera
+  const cam=s2c(0,-2.5);
+  cx2.fillStyle='#222238';cx2.strokeStyle='rgba(79,195,247,0.5)';cx2.lineWidth=1;
+  cx2.beginPath();cx2.rect(cam.x-12,cam.y-8,24,16);cx2.fill();cx2.stroke();
+  cx2.beginPath();cx2.arc(cam.x,cam.y,5,0,Math.PI*2);cx2.fillStyle='#4FC3F7';cx2.fill();
+  cx2.strokeStyle='rgba(79,195,247,0.12)';cx2.setLineDash([3,3]);cx2.lineWidth=0.5;
+  cx2.beginPath();cx2.moveTo(cam.x,cam.y);cx2.lineTo(sp.x-m2px(0.55),sp.y);
+  cx2.moveTo(cam.x,cam.y);cx2.lineTo(sp.x+m2px(0.55),sp.y);cx2.stroke();cx2.setLineDash([]);
+
+  // Lights
+  S.lights.forEach(l=>{
+    const lp=getLPos(l),lc=s2c(lp.x,lp.y);
+    const sel=S.selectedId===l.id;
+    if(!l.enabled)cx2.globalAlpha=0.3;
+    cx2.strokeStyle='rgba(255,255,255,0.12)';cx2.lineWidth=1;
+    cx2.beginPath();cx2.moveTo(lc.x,lc.y);cx2.lineTo(sp.x,sp.y);cx2.stroke();
+    drawModIcon(lc,l,sel);
+    // Long-press delete progress ring
+    if(longPress.active&&longPress.lightId===l.id){
+      cx2.beginPath();
+      cx2.arc(lc.x,lc.y,22,-Math.PI/2,-Math.PI/2+longPress.progress*Math.PI*2);
+      cx2.strokeStyle='#F44336';cx2.lineWidth=3;cx2.lineCap='round';cx2.stroke();
+      if(longPress.progress>0.15){
+        cx2.fillStyle='rgba(244,67,54,0.9)';cx2.font='600 9px -apple-system,Inter,sans-serif';
+        cx2.textAlign='center';cx2.fillText('Удалить',lc.x,lc.y-30);
+      }
+    }
+    cx2.fillStyle=sel?l.color:'rgba(255,255,255,0.55)';
+    cx2.font=`${sel?600:400} 11px -apple-system,Inter,sans-serif`;cx2.textAlign='center';
+    cx2.fillText(l.name,lc.x,lc.y+24);
+    cx2.fillStyle='rgba(255,255,255,0.35)';cx2.font='10px monospace';
+    cx2.fillText(`${l.power}W · ${l.dist.toFixed(1)}m`,lc.x,lc.y+35);
+    if(sel){
+      const sc2=s2c(0,0);
+      cx2.strokeStyle=`${l.color}50`;cx2.setLineDash([4,3]);cx2.lineWidth=1.5;
+      cx2.beginPath();cx2.moveTo(lc.x,lc.y);cx2.lineTo(sc2.x,sc2.y);cx2.stroke();cx2.setLineDash([]);
+      const mx=(lc.x+sc2.x)/2,my=(lc.y+sc2.y)/2;
+      cx2.fillStyle='rgba(0,0,0,0.75)';
+      roundRect(cx2,mx-22,my-9,44,16,5);cx2.fill();
+      cx2.fillStyle='rgba(255,255,255,0.85)';cx2.font='10px monospace';cx2.textAlign='center';
+      cx2.fillText(`${l.dist.toFixed(2)}m`,mx,my+3);
+    }
+    cx2.globalAlpha=1;
+  });
+
+  // Compass
+  const cpx=cv.width-28,cpy=28;
+  cx2.fillStyle='rgba(0,0,0,0.55)';cx2.beginPath();cx2.arc(cpx,cpy,18,0,Math.PI*2);cx2.fill();
+  ['N','E','S','W'].forEach((d,i)=>{
+    const a=i*Math.PI/2-Math.PI/2;
+    cx2.fillStyle=d==='N'?'#FF6B35':'rgba(255,255,255,0.4)';
+    cx2.font='9px -apple-system,Inter,sans-serif';cx2.textAlign='center';
+    cx2.fillText(d,cpx+Math.cos(a)*11,cpy+Math.sin(a)*11+3);
+  });
+
+  // Scale bar
+  const bw=m2px(1),bx=14,by=cv.height-16;
+  cx2.fillStyle='rgba(255,255,255,0.5)';
+  cx2.fillRect(bx,by-1,bw,1.5);cx2.fillRect(bx,by-4,1,4);cx2.fillRect(bx+bw,by-4,1,4);
+  cx2.font='9px monospace';cx2.textAlign='left';cx2.fillText('1м',bx+bw+4,by);
+}
+
+function drawSubjectTopDown(pos){
+  cx2.save();cx2.translate(pos.x,pos.y);
+  const hr=m2px(0.16);
+  cx2.beginPath();cx2.ellipse(0,0,hr*0.85,hr,0,0,Math.PI*2);
+  cx2.fillStyle='#3A2515';cx2.fill();
+  cx2.strokeStyle='rgba(255,255,255,0.25)';cx2.lineWidth=1;cx2.stroke();
+  cx2.beginPath();cx2.moveTo(0,0);cx2.lineTo(0,-hr*1.25);
+  cx2.strokeStyle='rgba(255,255,255,0.5)';cx2.stroke();
+  if(S.sub.type!=='head'){
+    cx2.fillStyle='rgba(58,37,20,0.6)';
+    cx2.beginPath();cx2.ellipse(0,hr+m2px(0.14),m2px(0.22),m2px(0.18),0,0,Math.PI*2);
+    cx2.fill();cx2.strokeStyle='rgba(255,255,255,0.12)';cx2.stroke();
+  }
+  cx2.restore();
+  cx2.fillStyle='rgba(255,255,255,0.3)';cx2.font='9px monospace';cx2.textAlign='center';
+  cx2.fillText('●',pos.x,pos.y+m2px(0.42));
+}
+
+function drawModIcon(pos,l,sel){
+  const r=sel?16:13;
+  cx2.save();cx2.translate(pos.x,pos.y);
+  const col=l.color;
+  if(sel){cx2.beginPath();cx2.arc(0,0,r+5,0,Math.PI*2);
+    cx2.strokeStyle=col;cx2.lineWidth=1.5;cx2.setLineDash([3,3]);cx2.stroke();cx2.setLineDash([])}
+  cx2.beginPath();
+  switch(l.modifier){
+    case'softbox60':case'softbox90':cx2.rect(-r,-r*0.65,r*2,r*1.3);break;
+    case'octabox90':case'octabox120':
+      for(let i=0;i<8;i++){const a=i*Math.PI/4-Math.PI/8,b=(i+1)*Math.PI/4-Math.PI/8;
+        cx2.lineTo(Math.cos(a)*r,Math.sin(a)*r);cx2.lineTo(Math.cos(b)*r,Math.sin(b)*r)}
+      cx2.closePath();break;
+    case'stripbox':cx2.rect(-r*0.35,-r,r*0.7,r*2);break;
+    case'umbrella-wt':case'umbrella-silver':case'umbrella-para':
+      cx2.arc(0,0,r,Math.PI,Math.PI*2);cx2.closePath();break;
+    case'beauty-dish':cx2.arc(0,0,r,0,Math.PI*2);cx2.moveTo(0,0);cx2.arc(0,0,r*0.3,0,Math.PI*2);break;
+    case'snoot':cx2.moveTo(-r*0.25,-r);cx2.lineTo(r*0.25,-r);cx2.lineTo(r*0.13,r);cx2.lineTo(-r*0.13,r);cx2.closePath();break;
+    case'ringlight':cx2.arc(0,0,r,0,Math.PI*2);cx2.moveTo(0,0);cx2.arc(0,0,r*0.5,0,Math.PI*2);break;
+    default:cx2.arc(0,0,r*0.7,0,Math.PI*2);
+  }
+  cx2.fillStyle=sel?`${col}30`:'rgba(255,255,255,0.07)';cx2.fill();
+  cx2.strokeStyle=sel?col:'rgba(255,255,255,0.3)';cx2.lineWidth=sel?1.8:1;cx2.stroke();
+  const pw=Math.min(l.power/1200,1);
+  cx2.beginPath();cx2.arc(0,0,3+pw*3,0,Math.PI*2);cx2.fillStyle=sel?col:`${col}90`;cx2.fill();
+  cx2.restore();
+}
+
+function roundRect(c,x,y,w,h,r){
+  c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.arcTo(x+w,y,x+w,y+r,r);
+  c.lineTo(x+w,y+h-r);c.arcTo(x+w,y+h,x+w-r,y+h,r);
+  c.lineTo(x+r,y+h);c.arcTo(x,y+h,x,y+h-r,r);c.lineTo(x,y+r);c.arcTo(x,y,x+r,y,r);c.closePath();
+}
+
+// ════════════════════════════════════════════
+// LIGHTING ENGINE
+// ════════════════════════════════════════════
+function ct2rgb(K){
+  let r,g,b;
+  if(K<6600){r=255;g=Math.round(99.47*Math.log(K/100)-161.12);b=K<=1900?0:Math.round(138.52*Math.log(K/100-10)-305.04);}
+  else{r=Math.round(329.7*Math.pow(K/100-60,-0.133));g=Math.round(288.1*Math.pow(K/100-60,-0.0755));b=255;}
+  return`${Math.max(0,Math.min(255,r))},${Math.max(0,Math.min(255,g))},${Math.max(0,Math.min(255,b))}`;
+}
+function computeEV(){
+  const iso=isoVals[S.cam.iso],ap=apVals[S.cam.aperture];
+  let tot=0;
+  S.lights.forEach(l=>{if(!l.enabled)return;const lp=getLPos(l);
+    const d=Math.sqrt(lp.x*lp.x+lp.y*lp.y+Math.pow((l.height-160)/100,2));
+    tot+=l.power/(d*d)*(0.5+(MOD_SOFT[l.modifier]||0.3)*0.5);
+  });
+  const lev=tot>0?Math.log2(tot/50):0;
+  const cev=Math.log2((ap*ap*100)/(iso*32));
+  return lev-cev*0.3;
+}
+function skinHex(skin){return{light:'#E8C8A0',medium:'#C8926A',dark:'#7A4A2A'}[skin]||'#C8926A'}
+function parseHex(h){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return{r,g,b}}
+function blend(a,b,t){const A=typeof a==='string'?parseHex(a):a,B=typeof b==='string'?parseHex(b):b;return{r:A.r+(B.r-A.r)*t,g:A.g+(B.g-A.g)*t,b:A.b+(B.b-A.b)*t}}
+function scale(c,s){const C=typeof c==='string'?parseHex(c):c;return{r:Math.max(0,Math.min(255,C.r*s)),g:Math.max(0,Math.min(255,C.g*s)),b:Math.max(0,Math.min(255,C.b*s))}}
+function rgba(c,a=1){const C=typeof c==='string'?parseHex(c):c;return`rgba(${Math.round(C.r)},${Math.round(C.g)},${Math.round(C.b)},${a})`}
+
+// ════════════════════════════════════════════
+// 3D RENDER ENGINE (Three.js)
+// Real PBR-ish skin material + actual scene lights
+// driven by the same physical model as the top-down view
+// ════════════════════════════════════════════
+let three={
+  scene:null,camera:null,renderer:null,
+  head:null,torso:null,eyeL:null,eyeR:null,
+  sceneLights:[],   // {mesh, light, helper}
+  rotY:0.35,rotX:0.05,dist:3.2,
+  container:null,
+  thumbRenderer:null,
+  ready:false,
+  autoRotate:true,
+};
+
+function initThree(){
+  if(three.ready)return;
+  const cont=document.getElementById('preview3d-container');
+  three.container=cont;
+  three.scene=new THREE.Scene();
+  three.scene.background=new THREE.Color(0x05050a);
+  three.scene.fog=new THREE.Fog(0x05050a,5,14);
+
+  three.camera=new THREE.PerspectiveCamera(35,1,0.1,100);
+  three.camera.position.set(0,0,three.dist);
+
+  three.renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
+  three.renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  three.renderer.outputEncoding=THREE.sRGBEncoding;
+  three.renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  three.renderer.toneMappingExposure=1.0;
+  three.renderer.shadowMap.enabled=true;
+  three.renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  cont.appendChild(three.renderer.domElement);
+
+  // ── Subject group ──
+  three.subjectGroup=new THREE.Group();
+  three.scene.add(three.subjectGroup);
+
+  buildHeadMesh();
+  buildEyes();
+  buildHairMesh();
+  buildNeckShoulders();
+
+  // Floor (catches contact shadow)
+  const floorGeo=new THREE.PlaneGeometry(20,20);
+  const floorMat=new THREE.ShadowMaterial({opacity:0.35});
+  const floor=new THREE.Mesh(floorGeo,floorMat);
+  floor.rotation.x=-Math.PI/2;
+  floor.position.y=-1.55;
+  floor.receiveShadow=true;
+  three.scene.add(floor);
+
+  // Backdrop plane (subtle gradient via vertex colors not needed — flat dark)
+  const bgGeo=new THREE.PlaneGeometry(14,9);
+  const bgMat=new THREE.MeshStandardMaterial({color:0x0c0c14,roughness:1,metalness:0});
+  const bgPlane=new THREE.Mesh(bgGeo,bgMat);
+  bgPlane.position.set(0,0.5,-3.5);
+  bgPlane.receiveShadow=true;
+  three.scene.add(bgPlane);
+
+  // Ambient floor bounce (very low, simulates room bounce)
+  three.ambient=new THREE.AmbientLight(0x404050,0.08);
+  three.scene.add(three.ambient);
+
+  three.ready=true;
+  syncThreeLights();
+  animateThree();
+}
+
+function buildHeadMesh(){
+  // Egg-shaped head: widest at eye-line (mid-height), narrower at crown and jaw.
+  const geo=new THREE.SphereGeometry(0.5,64,64);
+  const pos=geo.attributes.position;
+  for(let i=0;i<pos.count;i++){
+    let x=pos.getX(i),y=pos.getY(i),z=pos.getZ(i);
+    const t=(y+0.5)/1.0; // 0 = chin/bottom .. 1 = crown/top
+    // Widest around the eye-line (t≈0.62), narrowing toward both chin and crown.
+    // Using a smooth bump so cheekbones read wider than jaw or skull-top.
+    const bump=1-Math.pow(Math.abs(t-0.62)*1.5,1.6);
+    const taper=0.72+0.34*Math.max(0,bump);
+    x*=taper;z*=taper*0.96;
+    // Push face slightly forward, flatten the back of the skull a touch.
+    if(z>0.05)z*=1.12; else z*=0.92;
+    pos.setXYZ(i,x,y,z);
+  }
+  geo.computeVertexNormals();
+  const mat=makeSkinMaterial();
+  three.head=new THREE.Mesh(geo,mat);
+  three.head.castShadow=true;three.head.receiveShadow=true;
+  // Head spans roughly y=[-0.5,0.5] locally; lift so chin sits near the neck join.
+  three.head.position.y=0.05;
+  three.subjectGroup.add(three.head);
+
+  // Nose (simple cone-ish bump), placed on the front face around eye-line height.
+  const noseGeo=new THREE.ConeGeometry(0.065,0.18,12);
+  const nose=new THREE.Mesh(noseGeo,mat);
+  nose.position.set(0,0.02,0.46);
+  nose.rotation.x=Math.PI/2.1;
+  nose.castShadow=true;
+  three.head.add(nose);
+
+  // Lips — a torus arc oriented so the opening faces forward/down like a mouth,
+  // not rotated almost a full half-turn (which flipped it into a frown/smile loop).
+  const lipGeo=new THREE.TorusGeometry(0.085,0.02,8,16,Math.PI*1.15);
+  const lipMat=new THREE.MeshStandardMaterial({color:0x9a5346,roughness:0.4,metalness:0});
+  const lips=new THREE.Mesh(lipGeo,lipMat);
+  lips.position.set(0,-0.22,0.46);
+  lips.rotation.set(0,0,Math.PI*1.07);
+  lips.scale.set(1,0.55,1);
+  three.head.add(lips);
+}
+
+function makeSkinMaterial(){
+  return new THREE.MeshPhysicalMaterial({
+    color:0xC8926A,
+    roughness:0.55,
+    metalness:0.0,
+    clearcoat:0.18,        // thin oily/sweat layer -> sharper specular
+    clearcoatRoughness:0.35,
+    sheen:new THREE.Color(0xff8866).multiplyScalar(0.25), // r128 API: sheen IS the color (scaled for intensity)
+    reflectivity:0.25,
+  });
+}
+
+function buildEyes(){
+  const eyeGeo=new THREE.SphereGeometry(0.072,24,24);
+  const whiteMat=new THREE.MeshStandardMaterial({color:0xd8d8d0,roughness:0.25,metalness:0});
+  [[-0.215,0.27,0.52],[0.215,0.27,0.52]].forEach((p,i)=>{
+    const eye=new THREE.Mesh(eyeGeo,whiteMat);
+    eye.position.set(...p);
+    three.head.add(eye);
+    const irisGeo=new THREE.CircleGeometry(0.034,20);
+    const irisMat=new THREE.MeshStandardMaterial({color:0x3a5a3a,roughness:0.15,metalness:0.1,side:THREE.DoubleSide});
+    const iris=new THREE.Mesh(irisGeo,irisMat);
+    iris.position.set(p[0],p[1],p[2]+0.066);
+    three.head.add(iris);
+    const pupilGeo=new THREE.CircleGeometry(0.014,16);
+    const pupilMat=new THREE.MeshStandardMaterial({color:0x050505,roughness:0.05});
+    const pupil=new THREE.Mesh(pupilGeo,pupilMat);
+    pupil.position.set(p[0],p[1],p[2]+0.0685);
+    three.head.add(pupil);
+    if(i===0)three.eyeL=iris;else three.eyeR=iris;
+  });
+}
+
+function buildHairMesh(){
+  const geo=new THREE.SphereGeometry(0.66,32,32,0,Math.PI*2,0,Math.PI*0.62);
+  const mat=new THREE.MeshStandardMaterial({color:0x1c130a,roughness:0.45,metalness:0.05});
+  const hair=new THREE.Mesh(geo,mat);
+  hair.position.set(0,0.42,-0.02);
+  hair.castShadow=true;
+  three.head.add(hair);
+  three.hair=hair;
+}
+
+function buildNeckShoulders(){
+  const neckGeo=new THREE.CylinderGeometry(0.18,0.22,0.35,24);
+  const neckMat=makeSkinMaterial();
+  const neck=new THREE.Mesh(neckGeo,neckMat);
+  neck.position.y=-0.42;
+  neck.castShadow=true;neck.receiveShadow=true;
+  three.subjectGroup.add(neck);
+  three.neck=neck;
+
+  const torsoGeo=new THREE.CylinderGeometry(0.62,0.5,0.75,32,1,true);
+  const torsoMat=new THREE.MeshStandardMaterial({color:0x2a2a38,roughness:0.7,metalness:0});
+  const torso=new THREE.Mesh(torsoGeo,torsoMat);
+  torso.position.y=-0.92;
+  torso.castShadow=true;torso.receiveShadow=true;
+  three.subjectGroup.add(torso);
+  three.torso=torso;
+  applySubjectVisibility();
+}
+
+function applySubjectVisibility(){
+  if(!three.ready)return;
+  three.torso.visible=S.sub.type==='full'||S.sub.type==='half';
+  three.neck.visible=S.sub.type!=='head';
+  const skinColor=new THREE.Color(skinHex(S.sub.skin));
+  three.head.material.color.copy(skinColor);
+  three.neck.material.color.copy(skinColor);
+}
+
+// ── Map modifier id -> Three.js light + softness/size for shadow/penumbra ──
+// NOTE: we intentionally avoid THREE.RectAreaLight here — it requires
+// RectAreaLightUniformsLib initialization and does not support shadow maps,
+// which would look worse for large softboxes. A wide-angle SpotLight with
+// high penumbra is a good practical approximation on mobile GPUs.
+function modToLightParams(modifier){
+  const table={
+    none:{type:'point',size:0.02,angle:0.5,penumbra:0.8,decay:2},
+    softbox60:{type:'spot',size:0.6,angle:0.55,penumbra:0.9,decay:1.6},
+    softbox90:{type:'spot',size:0.7,angle:0.6,penumbra:0.92,decay:1.6},
+    octabox90:{type:'spot',size:0.75,angle:0.62,penumbra:0.95,decay:1.5},
+    octabox120:{type:'spot',size:0.85,angle:0.68,penumbra:0.97,decay:1.4},
+    stripbox:{type:'spot',size:0.5,angle:0.45,penumbra:0.85,decay:1.6},
+    'umbrella-wt':{type:'spot',size:0.8,angle:0.7,penumbra:0.98,decay:1.3},
+    'umbrella-silver':{type:'spot',size:0.4,angle:0.9,penumbra:0.5,decay:1.8},
+    'umbrella-para':{type:'spot',size:0.85,angle:0.72,penumbra:0.95,decay:1.3},
+    'beauty-dish':{type:'spot',size:0.55,angle:0.55,penumbra:0.35,decay:1.9},
+    snoot:{type:'spot',size:0.08,angle:0.18,penumbra:0.15,decay:2.4},
+    ringlight:{type:'point',size:0.45,angle:0.7,penumbra:0.6,decay:1.8},
+    fresnel:{type:'spot',size:0.15,angle:0.25,penumbra:0.2,decay:2.2},
+  };
+  return table[modifier]||table.none;
+}
+
+function syncThreeLights(){
+  if(!three.ready)return;
+  // remove old
+  three.sceneLights.forEach(o=>{three.scene.remove(o.light);if(o.light.target)three.scene.remove(o.light.target);if(o.mesh)three.scene.remove(o.mesh)});
+  three.sceneLights=[];
+
+  S.lights.forEach(l=>{
+    const lp=getLPos(l); // studio meters -> map to 3D world (x,z), y from height
+    const worldX=lp.x*1.1;
+    const worldZ=-lp.y*1.1; // studio "y" (toward subject) -> -Z toward camera-ish
+    const worldY=(l.height-160)/100*1.2+0.3;
+
+    const params=modToLightParams(l.modifier);
+    const col=ct2threeColor(l.colorTemp);
+    const intensity=l.enabled?Math.min(8,(l.power/(l.dist*l.dist))*0.018):0;
+
+    let light;
+    if(params.type==='spot'){
+      light=new THREE.SpotLight(col,intensity,12,params.angle,params.penumbra,params.decay);
+      light.castShadow=true;
+      light.shadow.mapSize.set(512,512);
+      light.shadow.radius=params.size*40;
+      light.shadow.camera.near=0.1;
+      light.shadow.camera.far=12;
+    } else {
+      light=new THREE.PointLight(col,intensity,12,params.decay);
+      light.castShadow=true;
+      light.shadow.mapSize.set(512,512);
+      light.shadow.radius=(params.size||0.1)*30;
+      light.shadow.camera.near=0.1;
+      light.shadow.camera.far=12;
+    }
+    light.position.set(worldX,worldY,worldZ);
+    if(params.type==='spot'){
+      light.target.position.set(0,0.1,0);
+      three.scene.add(light.target);
+    }
+    three.scene.add(light);
+
+    // Small glowing marker sphere for visual feedback (only if enabled)
+    let mesh=null;
+    if(l.enabled){
+      const mGeo=new THREE.SphereGeometry(0.04,8,8);
+      const mMat=new THREE.MeshBasicMaterial({color:col});
+      mesh=new THREE.Mesh(mGeo,mMat);
+      mesh.position.copy(light.position);
+      three.scene.add(mesh);
+    }
+    three.sceneLights.push({light,mesh,lightId:l.id});
+  });
+}
+
+function ct2threeColor(K){
+  const rgbStr=ct2rgb(K).split(',').map(Number);
+  return new THREE.Color(rgbStr[0]/255,rgbStr[1]/255,rgbStr[2]/255);
+}
+
+function animateThree(){
+  requestAnimationFrame(animateThree);
+  if(!three.ready)return;
+  if(three.autoRotate&&!three.dragging){
+    three.rotY+=0.0018;
+  }
+  three.subjectGroup.rotation.y=three.rotY;
+  three.subjectGroup.rotation.x=three.rotX;
+  three.camera.position.set(0,0.1,three.dist);
+  three.camera.lookAt(0,0.05,0);
+  const overlayOpen=document.getElementById('preview-overlay').classList.contains('show');
+  if(overlayOpen){
+    const sz=getThreeSize();
+    renderThreeTo(three.renderer,sz);
+  } else if(S.activeScreen==='editor'){
+    renderThumbnail();
+  }
+}
+function getThreeSize(){
+  const ov=document.getElementById('preview-overlay');
+  if(ov.classList.contains('show')){
+    return{w:window.innerWidth,h:window.innerHeight};
+  }
+  return{w:1,h:1};
+}
+function renderThreeTo(renderer,size){
+  if(size.w<=1)return;
+  renderer.setSize(size.w,size.h,false);
+  three.camera.aspect=size.w/size.h;
+  three.camera.updateProjectionMatrix();
+  renderer.render(three.scene,three.camera);
+}
+
+// ── Thumbnail: lightweight offscreen render snapshotted into 2D canvas ──
+let thumbThree=null;
+function initThumbThree(){
+  if(thumbThree)return;
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,preserveDrawingBuffer:true});
+  renderer.setPixelRatio(1);
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  thumbThree={renderer};
+}
+function renderThumbnail(){
+  if(!three.ready)return;
+  initThumbThree();
+  const W=thumbCv.width,H=thumbCv.height;
+  thumbThree.renderer.setSize(W,H,false);
+  three.camera.aspect=W/H;
+  three.camera.updateProjectionMatrix();
+  thumbThree.renderer.render(three.scene,three.camera);
+  tcx.clearRect(0,0,W,H);
+  tcx.drawImage(thumbThree.renderer.domElement,0,0,W,H);
+  // restore main aspect next frame via animateThree's getThreeSize logic
+}
+
+// ════════════════════════════════════════════
+// CATCHLIGHT MINI-PREVIEW (kept as 2D — eye close-up diagram, tab "Анализ")
+// ════════════════════════════════════════════
+function drawCatchPrev(){
+  const W=catchCv.width||300,H=catchCv.height||80;
+  ccx.clearRect(0,0,W,H);ccx.fillStyle='#0A0A14';ccx.fillRect(0,0,W,H);
+  const ecx=W/2,ecy=H/2,er=Math.min(W,H)*.38;
+  ccx.fillStyle='rgba(215,215,205,0.9)';ccx.beginPath();ccx.ellipse(ecx,ecy,er,er*.6,0,0,Math.PI*2);ccx.fill();
+  ccx.fillStyle='#3A5A7A';ccx.beginPath();ccx.arc(ecx,ecy,er*.55,0,Math.PI*2);ccx.fill();
+  ccx.fillStyle='#0A0A0A';ccx.beginPath();ccx.arc(ecx,ecy,er*.28,0,Math.PI*2);ccx.fill();
+  const lights=S.lights.filter(l=>l.enabled);
+  lights.forEach(l=>{
+    const lp=getLPos(l),ang=Math.atan2(lp.x,lp.y);
+    const clx=ecx+Math.sin(ang)*er*.22,cly=ecy-Math.cos(ang)*er*.15;
+    const cs=er*.13*(l.power/400)*.4+2;
+    const br=Math.min(0.95,l.power/(l.dist*l.dist*18));
+    ccx.fillStyle=`rgba(255,255,255,${br})`;
+    const m=l.modifier;
+    if(m==='octabox90'||m==='octabox120'){
+      ccx.beginPath();for(let j=0;j<8;j++){const a=j*Math.PI/4;ccx.lineTo(clx+Math.cos(a)*cs,cly+Math.sin(a)*cs)}
+      ccx.closePath();ccx.fill();
+    } else if(m==='ringlight'){
+      ccx.strokeStyle=`rgba(255,255,255,${br})`;ccx.lineWidth=cs*.35;
+      ccx.beginPath();ccx.arc(clx,cly,cs,0,Math.PI*2);ccx.stroke();
+    } else if(m==='stripbox'){
+      ccx.fillRect(clx-cs*.25,cly-cs,cs*.5,cs*2);
+    } else {
+      ccx.beginPath();ccx.ellipse(clx,cly,cs*1.1,cs*.85,0,0,Math.PI*2);ccx.fill();
+    }
+  });
+}
+
+// ════════════════════════════════════════════
+// HISTOGRAM
+// ════════════════════════════════════════════
+function drawHist(){
+  const W=histCv.width||300,H=64;
+  hcx.clearRect(0,0,W,H);hcx.fillStyle='#0F0F1A';hcx.fillRect(0,0,W,H);
+  const ev=computeEV();const bright=Math.max(0,Math.min(3,ev*.5+1));
+  const bins=new Array(32).fill(0);
+  const lights=S.lights.filter(l=>l.enabled);
+  if(!lights.length){for(let i=0;i<8;i++)bins[i]+=Math.random()*25+15;}
+  else{
+    const c=Math.floor(bright*10);
+    for(let i=0;i<32;i++){const d=Math.abs(i-c);bins[i]=Math.max(0,75*Math.exp(-d*d*.08)*(0.8+Math.random()*.4))}
+    if(lights.length>1){const c2=Math.max(0,c-4);for(let i=0;i<32;i++){const d=Math.abs(i-c2);bins[i]+=Math.max(0,35*Math.exp(-d*d*.12))}}
+    for(let i=0;i<32;i++)bins[i]+=Math.random()*4;
+  }
+  const mx=Math.max(...bins,1);
+  ['rgba(255,60,60,0.55)','rgba(60,255,60,0.45)','rgba(60,60,255,0.5)'].forEach((col,ci)=>{
+    hcx.fillStyle=col;
+    for(let i=0;i<32;i++){
+      const h=(bins[i]/mx)*(H-3)*.9,x=i*(W/32),bw=(W/32)-.5;
+      hcx.fillRect(x+(ci-1)*.4,H-h-1,bw,h);
+    }
+  });
+  hcx.strokeStyle='rgba(255,255,255,0.08)';hcx.lineWidth=.5;
+  for(let i=1;i<4;i++){const x=W/4*i;hcx.beginPath();hcx.moveTo(x,0);hcx.lineTo(x,H);hcx.stroke()}
+  const tot=bins.reduce((s,b)=>s+b,0)||1;
+  document.getElementById('hi-sh').textContent=Math.round(bins.slice(0,10).reduce((s,b)=>s+b,0)/tot*100)+'%';
+  document.getElementById('hi-mid').textContent=Math.round(bins.slice(10,22).reduce((s,b)=>s+b,0)/tot*100)+'%';
+  document.getElementById('hi-hi').textContent=Math.round(bins.slice(22).reduce((s,b)=>s+b,0)/tot*100)+'%';
+}
+
+// ════════════════════════════════════════════
+// EV METER
+// ════════════════════════════════════════════
+function updateEV(){
+  const ev=computeEV();
+  const cl=Math.max(-3,Math.min(3,ev));
+  const pct=(cl+3)/6*100;
+  document.getElementById('ev-fill').style.width=`${Math.max(3,pct)}%`;
+  document.getElementById('ev-mark').style.left=`${pct}%`;
+  const el=document.getElementById('ev-val');
+  el.textContent=`${ev>0?'+':''}${ev.toFixed(1)}`;
+  el.className='ev-val-mini '+(Math.abs(ev)>2?'ev-over':Math.abs(ev)>1.2?'ev-under':'ev-ok');
+  document.getElementById('info-ev').textContent=`${ev>0?'+':''}${ev.toFixed(1)} EV`;
+  document.getElementById('info-ev').className='stat-card-val '+(Math.abs(ev)>2?'err':Math.abs(ev)>1?'warn':'ok');
+}
+
+// ════════════════════════════════════════════
+// DRAW ALL
+// ════════════════════════════════════════════
+function drawAll(){
+  drawTopDown();
+  if(S.activeScreen==='editor'){
+    drawCatchPrev();
+    drawHist();
+  }
+  syncThreeLights();
+  applySubjectVisibility();
+  if(three.ready)renderThumbnail();
+  updateEV();
+  updateAnalysis();
+  const ov=document.getElementById('preview-overlay-ev');
+  if(ov){const ev=computeEV();ov.textContent=`${ev>0?'+':''}${ev.toFixed(1)} EV`;}
+}
+
+// ════════════════════════════════════════════
+// ANALYSIS
+// ════════════════════════════════════════════
+function updateAnalysis(){
+  const lights=S.lights.filter(l=>l.enabled);
+  if(!lights.length){
+    document.getElementById('info-ratio').textContent='—';
+    document.getElementById('info-soft').textContent='—';
+    document.getElementById('info-ct').textContent='—';
+    document.getElementById('recommendations').innerHTML='<span style="color:var(--text3)">Добавьте источник света для анализа.</span>';
+    return;
+  }
+  const key=lights.reduce((a,b)=>a.power/(a.dist*a.dist)>b.power/(b.dist*b.dist)?a:b);
+  const fills=lights.filter(l=>l!==key);
+  if(fills.length){
+    const kI=key.power/(key.dist*key.dist);
+    const fI=fills.reduce((s,l)=>s+l.power/(l.dist*l.dist),0)/fills.length;
+    document.getElementById('info-ratio').textContent=`${Math.max(1,Math.round(kI/fI))}:1`;
+  } else document.getElementById('info-ratio').textContent='Нет заполн.';
+  const soft=Math.round((MOD_SOFT[key.modifier]||0.3)*100);
+  document.getElementById('info-soft').textContent=`${soft}%`;
+  document.getElementById('info-ct').textContent=`${key.colorTemp}K`;
+  const ev=computeEV();
+  const recs=[];
+  if(ev>2)recs.push('⚠️ Пересветка — уменьшите мощность или прикройте диафрагму.');
+  else if(ev<-1.2)recs.push('💡 Мало света — увеличьте мощность или откройте диафрагму.');
+  if(lights.length===1)recs.push('➕ Добавьте заполняющий свет — смягчит тени.');
+  if(lights.some(l=>l.dist<1))recs.push('📏 Источник слишком близко — жёсткие тени.');
+  if(!recs.length)recs.push('✅ Сцена сбалансирована. Хорошая экспозиция.');
+  document.getElementById('recommendations').innerHTML=recs.join('<br>');
+}
+
+// ════════════════════════════════════════════
+// LIGHTS LIST
+// ════════════════════════════════════════════
+function renderLightsList(){
+  const el=document.getElementById('lights-list');
+  el.innerHTML='';
+  S.lights.forEach(l=>{
+    const d=document.createElement('div');
+    d.className='light-card'+(S.selectedId===l.id?' selected':'');
+    d.innerHTML=`
+      <div class="light-color-dot" style="background:${l.color}"></div>
+      <div class="light-info">
+        <div class="light-info-name">${l.name}</div>
+        <div class="light-info-sub">${l.power}Вт · ${l.dist.toFixed(1)}м · ${l.colorTemp}K</div>
+      </div>
+      <div class="light-badge">${modName(l.modifier)}</div>
+      <div class="toggle${l.enabled?' on':''}" onclick="toggleLight(event,${l.id})"></div>
+    `;
+    d.addEventListener('click',()=>selectLight(l.id));
+    el.appendChild(d);
+  });
+}
+function modName(m){const names={none:'Голый',softbox60:'SB60',softbox90:'SB90',octabox90:'OB90',octabox120:'OB120',stripbox:'Strip','umbrella-wt':'Зонт','umbrella-silver':'Серебро','beauty-dish':'Beauty',snoot:'Сноут',ringlight:'Ring',fresnel:'Fresnel','umbrella-para':'Параб.'};return names[m]||m}
+
+function renderModGrid(){
+  const mg=document.getElementById('mod-grid');mg.innerHTML='';
+  const l=S.lights.find(l=>l.id===S.selectedId);
+  MOD_LIST.forEach(m=>{
+    const d=document.createElement('div');
+    d.className='mod-card'+(l&&l.modifier===m.id?' selected':'');
+    d.innerHTML=`<div class="mod-card-icon">${m.icon}</div><div class="mod-card-name">${m.name}</div>`;
+    d.onclick=()=>updateLP('modifier',m.id);
+    mg.appendChild(d);
+  });
+}
+
+function renderParamsPane(){
+  const l=S.lights.find(l=>l.id===S.selectedId);
+  const nm=document.getElementById('no-light-msg');
+  const pp=document.getElementById('light-params-pane');
+  if(!l){nm.style.display='';pp.style.display='none';return}
+  nm.style.display='none';pp.style.display='block';
+  document.getElementById('params-swatch').style.background=l.color;
+  document.getElementById('params-light-name').textContent=l.name;
+  document.getElementById('params-light-type').textContent={strobe:'Вспышка-стробоскоп',led:'LED Постоянный',speedlight:'Speedlight',fresnel:'Fresnel',ringlight:'Ring Light',barebulb:'Bare Bulb'}[l.type]||l.type;
+  const tog=document.getElementById('params-toggle');
+  tog.className='toggle'+(l.enabled?' on':'');
+  document.getElementById('p-power').value=l.power;document.getElementById('pv-power').textContent=`${l.power}Вт`;
+  document.getElementById('p-dist').value=Math.round(l.dist*100);document.getElementById('pv-dist').textContent=`${l.dist.toFixed(2)}м`;
+  document.getElementById('p-height').value=l.height;document.getElementById('pv-height').textContent=`${l.height}см`;
+  document.getElementById('p-tilt').value=l.tilt;document.getElementById('pv-tilt').textContent=`${l.tilt}°`;
+  document.getElementById('p-angle').value=l.angle;document.getElementById('pv-angle').textContent=`${Math.round(l.angle)}°`;
+  document.getElementById('p-ct').value=l.colorTemp;document.getElementById('pv-ct').textContent=`${l.colorTemp}K`;
+  renderModGrid();
+}
+
+// ════════════════════════════════════════════
+// ACTIONS
+// ════════════════════════════════════════════
+function selectLight(id){
+  S.selectedId=S.selectedId===id?null:id;
+  renderLightsList();
+  renderParamsPane();
+  if(S.selectedId&&S.activeTab!=='params'){setSheetTab('params')}
+  drawAll();
+}
+function toggleLight(e,id){
+  e.stopPropagation();
+  const l=S.lights.find(l=>l.id===id);if(l){l.enabled=!l.enabled;renderLightsList();renderParamsPane();drawAll()}
+}
+function toggleSelectedLight(){
+  const l=S.lights.find(l=>l.id===S.selectedId);if(l){l.enabled=!l.enabled;renderLightsList();renderParamsPane();drawAll()}
+}
+function updateLP(param,val){
+  const l=S.lights.find(l=>l.id===S.selectedId);if(!l)return;
+  if(param==='dist')l.dist=parseFloat(val);
+  else if(['power','height','tilt','colorTemp','angle'].includes(param))l[param]=Number(val);
+  else l[param]=val;
+  renderParamsPane();renderModGrid();renderLightsList();updateAnalysis();updateEV();drawAll();
+}
+function updateCam(p,v){
+  if(p==='wb')S.cam.wb=Number(v);else S.cam[p]=Number(v);
+  const labels={iso:`ISO ${isoVals[S.cam.iso]}`,aperture:`f/${apVals[S.cam.aperture]}`,shutter:shVals[S.cam.shutter],wb:`${S.cam.wb}K`};
+  const ids={iso:'cv-iso',aperture:'cv-ap',shutter:'cv-sh',wb:'cv-wb'};
+  document.getElementById(ids[p]).textContent=labels[p];
+  updateEV();drawAll();
+}
+function duplicateSelected(){
+  const l=S.lights.find(l=>l.id===S.selectedId);if(!l)return;
+  const id=S.nextId++;
+  S.lights.push({...l,id,name:l.name+' 2',angle:(l.angle+20)%360,color:COLORS[S.lights.length%COLORS.length]});
+  S.selectedId=id;renderLightsList();renderParamsPane();drawAll();
+}
+function deleteSelected(){
+  S.lights=S.lights.filter(l=>l.id!==S.selectedId);S.selectedId=null;
+  renderLightsList();renderParamsPane();drawAll();
+}
+function toggleGrid(){
+  S.grid=!S.grid;
+  document.getElementById('grid-btn').classList.toggle('accent-active',S.grid);
+  document.getElementById('grid-c-btn').classList.toggle('on',S.grid);
+  const gt=document.getElementById('grid-setting-toggle');if(gt)gt.className='toggle'+(S.grid?' on':'');
+  drawTopDown();
+}
+function toggleCatchlight(){
+  S.sub.catchlight=!S.sub.catchlight;
+  const t=document.getElementById('catch-toggle');if(t)t.className='toggle'+(S.sub.catchlight?' on':'');
+  drawAll();
+}
+function resetView(){S.view.zoom=1;S.view.panX=0;S.view.panY=0;drawAll()}
+function zoomIn(){S.view.zoom=Math.min(4,S.view.zoom*1.25);showZoom();drawAll()}
+function zoomOut(){S.view.zoom=Math.max(0.3,S.view.zoom*0.8);showZoom();drawAll()}
+function showZoom(){
+  const zi=document.getElementById('zoom-ind');
+  zi.textContent=`${Math.round(S.view.zoom*100)}%`;
+  zi.classList.add('show');clearTimeout(zi._t);zi._t=setTimeout(()=>zi.classList.remove('show'),1200);
+}
+function setSeg(el,prop,val){
+  const par=el.parentElement;par.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');S.sub[prop]=val;drawAll();
+}
+function pickLT(el){document.querySelectorAll('.lt-card').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');S.newLT=el.dataset.type}
+function pickSeg(el,key,val){
+  const par=el.parentElement;par.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');S[key]=val;
+}
+
+// ════════════════════════════════════════════
+// PRESETS
+// ════════════════════════════════════════════
+function applyPreset(key){
+  const p=PRESETS[key];S.currentPreset=key;S.lights=[];S.selectedId=null;
+  const labels=['Ключевой','Заполняющий','Контровой','Волосовой','Фоновый'];
+  p.lights.forEach((ld,i)=>{
+    const id=S.nextId++;
+    S.lights.push({id,name:labels[i]||`Свет ${i+1}`,angle:ld.angle,dist:ld.dist,power:ld.power,
+      modifier:ld.modifier,height:ld.height,tilt:ld.tilt,colorTemp:ld.colorTemp,
+      enabled:true,color:COLORS[i%COLORS.length],type:'strobe'});
+  });
+  document.getElementById('preset-pill-name').textContent=p.name;
+  document.getElementById('scheme-tag').textContent=p.name;
+  document.getElementById('canvas-pill').querySelector('span').textContent=p.name;
+  // Highlight preset cards
+  document.querySelectorAll('.preset-card').forEach(c=>c.classList.toggle('active',c.dataset.preset===key));
+  renderLightsList();renderParamsPane();updateAnalysis();updateEV();drawAll();
+}
+
+function renderPresets(){
+  const portrait=document.getElementById('preset-cards-portrait');
+  const studio=document.getElementById('preset-cards-studio');
+  portrait.innerHTML='';studio.innerHTML='';
+  Object.entries(PRESETS).forEach(([key,p])=>{
+    const d=document.createElement('div');
+    d.className='preset-card'+(S.currentPreset===key?' active':'');
+    d.dataset.preset=key;
+    d.innerHTML=`<div class="preset-card-icon">${p.icon}</div>
+      <div class="preset-card-name">${p.name}</div>
+      <div class="preset-card-desc">${p.desc}</div>
+      <div class="preset-card-lights">${p.lights.length} источник${p.lights.length>1?'а':''}</div>`;
+    d.onclick=()=>{applyPreset(key);setScreen('editor')};
+    (p.cat==='portrait'?portrait:studio).appendChild(d);
+  });
+}
+
+// ════════════════════════════════════════════
+// ADD LIGHT
+// ════════════════════════════════════════════
+function showAddLight(){document.getElementById('add-light-overlay').classList.add('show')}
+function closeOverlay(id,e){
+  if(e&&e.target!==document.getElementById(id))return;
+  document.getElementById(id).classList.remove('show');
+}
+function addLightConfirm(){
+  const angles=[315,45,180,90,270,0,225,135];
+  const id=S.nextId++;
+  const names={strobe:'Вспышка',led:'LED',speedlight:'Speedlight',fresnel:'Fresnel',ringlight:'Ring Light',barebulb:'Лампа'};
+  S.lights.push({id,name:names[S.newLT]||'Свет',type:S.newLT,
+    angle:angles[S.lights.length%8],dist:2.0,power:Number(S.newPower),
+    modifier:S.newMod,height:180,tilt:-30,colorTemp:5600,
+    enabled:true,color:COLORS[S.lights.length%COLORS.length]});
+  document.getElementById('add-light-overlay').classList.remove('show');
+  S.selectedId=id;
+  renderLightsList();renderParamsPane();updateAnalysis();updateEV();drawAll();
+  setSheetTab('params');
+}
+
+// ════════════════════════════════════════════
+// EXPORT
+// ════════════════════════════════════════════
+function exportSetup(){
+  const data={preset:S.currentPreset,lights:S.lights,camera:S.cam,subject:S.sub,ts:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`lightcraft-${S.currentPreset}.json`;a.click();
+}
+
+// ════════════════════════════════════════════
+// PREVIEW FULL SCREEN
+// ════════════════════════════════════════════
+// ════════════════════════════════════════════
+// PREVIEW FULL SCREEN (3D)
+// ════════════════════════════════════════════
+function showPreviewFull(){
+  const ov=document.getElementById('preview-overlay');ov.classList.add('show');
+  initThree();
+  three.autoRotate=true;
+  three.container.appendChild(three.renderer.domElement);
+  syncThreeLights();
+  setTimeout(()=>{
+    const sz=getThreeSize();
+    three.renderer.setSize(sz.w,sz.h,false);
+    three.camera.aspect=sz.w/sz.h;three.camera.updateProjectionMatrix();
+  },50);
+}
+function hidePreviewFull(){
+  document.getElementById('preview-overlay').classList.remove('show');
+  three.autoRotate=true;
+}
+function reset3DCamera(){
+  three.rotY=0.35;three.rotX=0.05;three.dist=3.2;
+  three.autoRotate=true;
+}
+
+// 3D rotate / pinch-zoom via touch on the fullscreen container
+(function(){
+  const cont=document.getElementById('preview3d-container');
+  let lastX=0,lastY=0,pinchD=null,pinchDist0=3.2;
+  cont.addEventListener('touchstart',e=>{
+    three.dragging=true;three.autoRotate=false;
+    if(e.touches.length===2){
+      const[t1,t2]=e.touches;
+      pinchD=Math.hypot(t2.clientX-t1.clientX,t2.clientY-t1.clientY);
+      pinchDist0=three.dist;
+    } else {
+      lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;
+    }
+  },{passive:true});
+  cont.addEventListener('touchmove',e=>{
+    if(e.touches.length===2&&pinchD){
+      const[t1,t2]=e.touches;
+      const d=Math.hypot(t2.clientX-t1.clientX,t2.clientY-t1.clientY);
+      three.dist=Math.max(1.8,Math.min(6,pinchDist0*(pinchD/d)));
+      return;
+    }
+    const t=e.touches[0];
+    const dx=t.clientX-lastX,dy=t.clientY-lastY;
+    three.rotY+=dx*0.008;
+    three.rotX=Math.max(-0.5,Math.min(0.5,three.rotX+dy*0.006));
+    lastX=t.clientX;lastY=t.clientY;
+  },{passive:true});
+  cont.addEventListener('touchend',e=>{
+    if(e.touches.length===0){three.dragging=false;pinchD=null;}
+  },{passive:true});
+  // mouse fallback
+  let mouseDown=false;
+  cont.addEventListener('mousedown',e=>{mouseDown=true;three.dragging=true;three.autoRotate=false;lastX=e.clientX;lastY=e.clientY});
+  window.addEventListener('mousemove',e=>{
+    if(!mouseDown)return;
+    const dx=e.clientX-lastX,dy=e.clientY-lastY;
+    three.rotY+=dx*0.008;three.rotX=Math.max(-0.5,Math.min(0.5,three.rotX+dy*0.006));
+    lastX=e.clientX;lastY=e.clientY;
+  });
+  window.addEventListener('mouseup',()=>{mouseDown=false;three.dragging=false});
+  cont.addEventListener('wheel',e=>{e.preventDefault();three.dist=Math.max(1.8,Math.min(6,three.dist*(e.deltaY>0?1.08:0.93)))},{passive:false});
+})();
+
+// ════════════════════════════════════════════
+// NAV / SCREENS / TABS
+// ════════════════════════════════════════════
+function setScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(`s-${name}`).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById(`nav-${name}`).classList.add('active');
+  // FAB only on editor
+  document.getElementById('fab').style.display=name==='editor'?'flex':'none';
+  S.activeScreen=name;
+  if(name==='editor'){resizeAll();drawAll()}
+}
+function setSheetTab(name){
+  S.activeTab=name;
+  document.querySelectorAll('.sheet-tab').forEach((t,i)=>{
+    const tabs=['lights','params','camera','info'];
+    t.classList.toggle('active',tabs[i]===name);
+  });
+  document.querySelectorAll('.tab-pane').forEach(p=>{
+    p.classList.toggle('active',p.id===`tab-${name}`);
+  });
+  if(name==='info'){drawCatchPrev();drawHist()}
+}
+
+// ════════════════════════════════════════════
+// TOUCH EVENTS
+// ════════════════════════════════════════════
+let drag=null,pinchStart=null,pinchStartZoom=1;
+let longPress={timer:null,lightId:null,progress:0,active:false};
+const LONGPRESS_MS=550;
+
+function startLongPress(lightId,sx,sy){
+  cancelLongPress();
+  longPress.lightId=lightId;longPress.active=true;longPress.progress=0;
+  longPress.startSX=sx;longPress.startSY=sy;
+  const tick=()=>{
+    if(!longPress.active)return;
+    longPress.progress+=16/LONGPRESS_MS;
+    drawTopDown();
+    if(longPress.progress>=1){
+      deleteLightById(longPress.lightId);
+      if(navigator.vibrate)navigator.vibrate(35);
+      cancelLongPress();
+      return;
+    }
+    longPress.timer=requestAnimationFrame(tick);
+  };
+  longPress.timer=requestAnimationFrame(tick);
+}
+function cancelLongPress(){
+  longPress.active=false;longPress.lightId=null;longPress.progress=0;
+  if(longPress.timer)cancelAnimationFrame(longPress.timer);
+  longPress.timer=null;
+}
+function deleteLightById(id){
+  S.lights=S.lights.filter(l=>l.id!==id);
+  if(S.selectedId===id)S.selectedId=null;
+  renderLightsList();renderParamsPane();updateAnalysis();updateEV();drawAll();
+}
+
+cv.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(e.touches.length===2){
+    cancelLongPress();
+    const t1=e.touches[0],t2=e.touches[1];
+    pinchStart=Math.hypot(t2.clientX-t1.clientX,t2.clientY-t1.clientY);
+    pinchStartZoom=S.view.zoom;drag=null;return;
+  }
+  const t=e.touches[0];
+  const r=cv.getBoundingClientRect();
+  const ox=t.clientX-r.left,oy=t.clientY-r.top;
+  const{x:sx,y:sy}=c2s(ox,oy);
+  let closest=null,closestD=0.5;
+  S.lights.forEach(l=>{const lp=getLPos(l);const d=Math.hypot(lp.x-sx,lp.y-sy);if(d<closestD){closest=l;closestD=d}});
+  if(closest){
+    selectLight(closest.id);
+    drag={id:closest.id};
+    startLongPress(closest.id,t.clientX,t.clientY);
+  }
+  else{drag={pan:true,sx:t.clientX,sy:t.clientY,px:S.view.panX,py:S.view.panY};selectLight(null)}
+},{passive:false});
+
+cv.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===2&&pinchStart){
+    cancelLongPress();
+    const t1=e.touches[0],t2=e.touches[1];
+    const d=Math.hypot(t2.clientX-t1.clientX,t2.clientY-t1.clientY);
+    S.view.zoom=Math.max(0.3,Math.min(4,pinchStartZoom*(d/pinchStart)));
+    showZoom();drawTopDown();return;
+  }
+  if(!drag)return;
+  const t=e.touches[0];
+  // Cancel long-press if finger moved too far (it's a drag, not a hold)
+  if(longPress.active){
+    const moved=Math.hypot(t.clientX-longPress.startSX,t.clientY-longPress.startSY);
+    if(moved>10)cancelLongPress();
+  }
+  if(drag.pan){
+    S.view.panX=drag.px+(t.clientX-drag.sx);
+    S.view.panY=drag.py+(t.clientY-drag.sy);
+    drawTopDown();return;
+  }
+  const r=cv.getBoundingClientRect();
+  const{x:sx,y:sy}=c2s(t.clientX-r.left,t.clientY-r.top);
+  const l=S.lights.find(l=>l.id===drag.id);if(!l)return;
+  l.angle=(Math.atan2(sx,sy)*180/Math.PI+360)%360;
+  l.dist=Math.max(0.5,Math.min(5,Math.hypot(sx,sy)));
+  renderParamsPane();renderLightsList();updateEV();updateAnalysis();drawAll();
+},{passive:false});
+
+cv.addEventListener('touchend',e=>{
+  cancelLongPress();
+  if(e.touches.length<2)pinchStart=null;
+  if(!e.touches.length)drag=null;
+},{passive:true});
+
+// Mouse fallback for desktop testing
+cv.addEventListener('mousedown',e=>{
+  const{x:sx,y:sy}=c2s(e.offsetX,e.offsetY);
+  let closest=null,cd=0.4;
+  S.lights.forEach(l=>{const lp=getLPos(l);const d=Math.hypot(lp.x-sx,lp.y-sy);if(d<cd){closest=l;cd=d}});
+  if(closest){selectLight(closest.id);drag={id:closest.id}}
+  else{drag={pan:true,sx:e.clientX,sy:e.clientY,px:S.view.panX,py:S.view.panY};selectLight(null)}
+});
+cv.addEventListener('mousemove',e=>{
+  if(!drag)return;
+  if(drag.pan){S.view.panX=drag.px+(e.clientX-drag.sx);S.view.panY=drag.py+(e.clientY-drag.sy);drawTopDown();return}
+  const{x:sx,y:sy}=c2s(e.offsetX,e.offsetY);
+  const l=S.lights.find(l=>l.id===drag.id);if(!l)return;
+  l.angle=(Math.atan2(sx,sy)*180/Math.PI+360)%360;
+  l.dist=Math.max(0.5,Math.min(5,Math.hypot(sx,sy)));
+  renderParamsPane();renderLightsList();updateEV();updateAnalysis();drawAll();
+});
+cv.addEventListener('mouseup',()=>drag=null);
+cv.addEventListener('wheel',e=>{e.preventDefault();S.view.zoom=Math.max(0.3,Math.min(4,S.view.zoom*(e.deltaY>0?.88:1.13)));showZoom();drawAll()},{passive:false});
+
+// ════════════════════════════════════════════
+// PREVENT BODY SCROLL/BOUNCE
+// ════════════════════════════════════════════
+document.addEventListener('touchmove',e=>{
+  if(!e.target.closest('#sheet-content, #s-presets, #s-settings, .bottom-modal')){
+    e.preventDefault();
+  }
+},{passive:false});
+document.addEventListener('gesturestart',e=>e.preventDefault());
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+window.addEventListener('resize',resizeAll);
+resizeAll();
+initThree();
+applyPreset('rembrandt');
+renderPresets();
+renderLightsList();
+renderParamsPane();
+// FAB bottom offset
+const fab=document.getElementById('fab');
+fab.style.bottom=`calc(${getComputedStyle(document.documentElement).getPropertyValue('--nav-h')} + var(--safe-bot) + 16px)`;
+// init camera UI
+document.getElementById('c-iso').value=S.cam.iso;
+document.getElementById('cv-iso').textContent=`ISO ${isoVals[S.cam.iso]}`;
+document.getElementById('c-ap').value=S.cam.aperture;
+document.getElementById('cv-ap').textContent=`f/${apVals[S.cam.aperture]}`;
+document.getElementById('c-sh').value=S.cam.shutter;
+document.getElementById('cv-sh').textContent=shVals[S.cam.shutter];
+document.getElementById('c-wb').value=S.cam.wb;
+document.getElementById('cv-wb').textContent=`${S.cam.wb}K`;
+</script>
+</body>
+</html>
