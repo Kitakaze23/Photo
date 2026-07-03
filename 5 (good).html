@@ -389,29 +389,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
   cursor:pointer;transition:all .12s}
 .bg-preset.active{border-color:var(--accent)}
 .bg-preset:active{transform:scale(0.9)}
-/* ── USER SCHEME SAVE BTN ── */
-.save-scheme-btn{
-  width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
-  padding:13px;border-radius:12px;border:1.5px dashed var(--accent);
-  background:rgba(255,107,53,0.06);color:var(--accent);
-  font-size:13px;font-weight:600;cursor:pointer;margin-bottom:4px;
-}
-.save-scheme-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
-.save-scheme-btn:active{background:rgba(255,107,53,0.14)}
-/* ── ICON PICKER ── */
-.icon-pick{
-  font-size:22px;width:44px;height:44px;border-radius:10px;
-  display:flex;align-items:center;justify-content:center;cursor:pointer;
-  border:2px solid transparent;background:var(--panel3);transition:all .12s;
-}
-.icon-pick.selected{border-color:var(--accent);background:rgba(255,107,53,0.12)}
-/* ── USER PRESET CARD ── */
-.preset-card-user{position:relative}
-.preset-card-user .more-btn{
-  position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:6px;
-  background:rgba(0,0,0,0.3);border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:15px;
-}
+/* ── UNDO BTN ── */
+#undo-btn:disabled{opacity:0.3;cursor:not-allowed}
+#undo-btn:not(:disabled){opacity:1}
 ::-webkit-scrollbar{width:0;height:0}
 /* ── TOUCH DRAG HINT ── */
 .drag-hint{
@@ -693,37 +673,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
   <!-- ── PRESETS SCREEN ── -->
   <div class="screen" id="s-presets">
     <div class="presets-header">
-      Схемы освещения
-      <em>Готовые схемы и ваши сохранённые</em>
+      Пресеты освещения
+      <em>Выберите готовую схему и настройте под себя</em>
     </div>
-
-    <!-- Save current setup button -->
-    <div style="padding:0 16px 4px">
-      <button class="save-scheme-btn" onclick="showSaveSchemeModal()">
-        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Сохранить текущую схему
-      </button>
-    </div>
-
-    <!-- User presets -->
-    <div id="user-presets-section" style="display:none">
-      <div class="preset-section-title" style="display:flex;align-items:center;justify-content:space-between;padding-right:16px">
-        <span>Мои схемы</span>
-      </div>
-      <div class="preset-cards" id="preset-cards-user"></div>
-    </div>
-
     <div class="preset-section-title">Портрет</div>
     <div class="preset-cards" id="preset-cards-portrait"></div>
-    <div class="preset-section-title">Мода</div>
-    <div class="preset-cards" id="preset-cards-fashion"></div>
-    <div class="preset-section-title">Красота</div>
-    <div class="preset-cards" id="preset-cards-beauty"></div>
-    <div class="preset-section-title">Кино</div>
-    <div class="preset-cards" id="preset-cards-cinema"></div>
-    <div class="preset-section-title">Продукт</div>
-    <div class="preset-cards" id="preset-cards-product"></div>
-    <div style="height:24px"></div>
+    <div class="preset-section-title">Студийные</div>
+    <div class="preset-cards" id="preset-cards-studio"></div>
+    <div style="height:20px"></div>
   </div>
 
   <!-- ── SETTINGS SCREEN ── -->
@@ -775,65 +732,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
     <span class="nav-label">Настройки</span>
   </button>
-</div>
-
-<!-- SAVE SCHEME MODAL -->
-<div class="sheet-overlay" id="save-scheme-overlay" onclick="closeOverlay('save-scheme-overlay',event)">
-  <div class="bottom-modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Сохранить схему</div>
-    <div class="modal-section">
-      <div class="modal-section-label">Название схемы</div>
-      <input id="scheme-name-input" type="text" placeholder="Моя схема"
-        style="width:100%;background:var(--panel3);border:1px solid var(--border2);border-radius:10px;
-               padding:12px 14px;color:var(--text);font-size:14px;outline:none;-webkit-appearance:none"
-        maxlength="32">
-    </div>
-    <div class="modal-section">
-      <div class="modal-section-label">Иконка</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <span class="icon-pick selected" onclick="pickSchemeIcon(this)" data-icon="⭐">⭐</span>
-        <span class="icon-pick" onclick="pickSchemeIcon(this)" data-icon="💡">💡</span>
-        <span class="icon-pick" onclick="pickSchemeIcon(this)" data-icon="📸">📸</span>
-        <span class="icon-pick" onclick="pickSchemeIcon(this)" data-icon="🎬">🎬</span>
-        <span class="icon-pick" onclick="pickSchemeIcon(this)" data-icon="💄">💄</span>
-        <span class="icon-pick" onclick="pickSchemeIcon(this)" data-icon="🔆">🔆</span>
-        <span class="icon-pick" onclick="pickSchemeIcon(this)" data-icon="🌙">🌙</span>
-        <span class="icon-pick" onclick="pickSchemeIcon(this)" data-icon="🎭">🎭</span>
-      </div>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeOverlay('save-scheme-overlay')">Отмена</button>
-      <button class="btn btn-primary" onclick="saveSchemeConfirm()">Сохранить</button>
-    </div>
-    <div style="height:8px"></div>
-  </div>
-</div>
-
-<!-- RENAME SCHEME MODAL -->
-<div class="sheet-overlay" id="rename-scheme-overlay" onclick="closeOverlay('rename-scheme-overlay',event)">
-  <div class="bottom-modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Переименовать схему</div>
-    <div class="modal-section">
-      <input id="rename-scheme-input" type="text"
-        style="width:100%;background:var(--panel3);border:1px solid var(--border2);border-radius:10px;
-               padding:12px 14px;color:var(--text);font-size:14px;outline:none;-webkit-appearance:none"
-        maxlength="32">
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeOverlay('rename-scheme-overlay')">Отмена</button>
-      <button class="btn btn-primary" onclick="renameSchemeConfirm()">Сохранить</button>
-    </div>
-    <div style="height:8px"></div>
-  </div>
-</div>
-
-<!-- CONTEXT MENU USER SCHEME -->
-<div id="ctx-scheme-menu" style="position:fixed;z-index:900;display:none;background:var(--panel2);
-  border:1px solid var(--border2);border-radius:12px;padding:4px;min-width:160px">
-  <div class="ctx-item" onclick="ctxRenameScheme()">Переименовать</div>
-  <div class="ctx-item ctx-danger" onclick="ctxDeleteScheme()">Удалить</div>
 </div>
 
 <!-- ADD LIGHT MODAL -->
@@ -966,7 +864,6 @@ const MOD_LIST=[
 ];
 
 const PRESETS={
-  // ── PORTRAIT ──────────────────────────────
   rembrandt:{name:'Rembrandt',icon:'🎭',desc:'Треугольник на щеке',cat:'portrait',lights:[
     {angle:315,dist:2.2,power:600,modifier:'octabox90',height:200,tilt:-35,colorTemp:5600},
     {angle:180,dist:2.8,power:200,modifier:'umbrella-silver',height:160,tilt:-15,colorTemp:5600}]},
@@ -976,62 +873,21 @@ const PRESETS={
   loop:{name:'Loop',icon:'🔄',desc:'Петля тени носа',cat:'portrait',lights:[
     {angle:340,dist:2.0,power:500,modifier:'softbox60',height:190,tilt:-30,colorTemp:5600},
     {angle:190,dist:2.5,power:180,modifier:'umbrella-wt',height:150,tilt:-10,colorTemp:5600}]},
-  split:{name:'Split',icon:'◧',desc:'Половина лица в тени',cat:'portrait',lights:[
+  split:{name:'Split',icon:'⬛',desc:'Половина лица в тени',cat:'portrait',lights:[
     {angle:270,dist:1.8,power:600,modifier:'beauty-dish',height:180,tilt:-20,colorTemp:5600}]},
   clamshell:{name:'Clamshell',icon:'🐚',desc:'Верх и низ — без теней',cat:'portrait',lights:[
     {angle:0,dist:1.6,power:400,modifier:'octabox90',height:200,tilt:-40,colorTemp:5600},
     {angle:0,dist:1.5,power:200,modifier:'stripbox',height:80,tilt:30,colorTemp:5600}]},
-  broad:{name:'Broad Light',icon:'◻',desc:'Широкая сторона лица освещена',cat:'portrait',lights:[
-    {angle:45,dist:2.0,power:500,modifier:'softbox90',height:185,tilt:-25,colorTemp:5600},
-    {angle:225,dist:3.0,power:150,modifier:'umbrella-wt',height:155,tilt:-10,colorTemp:5600}]},
-  shortlight:{name:'Short Light',icon:'◼',desc:'Узкая сторона лица освещена',cat:'portrait',lights:[
-    {angle:315,dist:2.0,power:600,modifier:'softbox60',height:185,tilt:-30,colorTemp:5600},
-    {angle:135,dist:3.2,power:150,modifier:'umbrella-wt',height:155,tilt:-10,colorTemp:5600}]},
-  // ── FASHION ───────────────────────────────
-  highkey:{name:'High Key',icon:'☀️',desc:'Яркий фон, мягкие тени',cat:'fashion',lights:[
+  highkey:{name:'High Key',icon:'☀️',desc:'Яркий фон, мягкие тени',cat:'studio',lights:[
     {angle:340,dist:2.0,power:400,modifier:'octabox120',height:190,tilt:-25,colorTemp:5500},
     {angle:20,dist:2.0,power:350,modifier:'octabox120',height:190,tilt:-25,colorTemp:5500},
     {angle:180,dist:3.5,power:600,modifier:'umbrella-wt',height:160,tilt:-10,colorTemp:5500}]},
-  lowkey:{name:'Low Key',icon:'🌑',desc:'Глубокие тени, контраст',cat:'fashion',lights:[
+  lowkey:{name:'Low Key',icon:'🌑',desc:'Глубокие тени, контраст',cat:'studio',lights:[
     {angle:305,dist:2.2,power:800,modifier:'snoot',height:200,tilt:-40,colorTemp:4500}]},
-  editorial:{name:'Editorial',icon:'📸',desc:'Жёсткий свет, глубокие тени',cat:'fashion',lights:[
-    {angle:330,dist:1.8,power:800,modifier:'none',height:210,tilt:-35,colorTemp:5800},
-    {angle:150,dist:3.5,power:100,modifier:'umbrella-silver',height:170,tilt:-10,colorTemp:5800},
-    {angle:60,dist:3.0,power:400,modifier:'stripbox',height:200,tilt:-25,colorTemp:5800}]},
-  rimonly:{name:'Rim Only',icon:'🔆',desc:'Только контровой свет',cat:'fashion',lights:[
-    {angle:135,dist:1.5,power:600,modifier:'stripbox',height:195,tilt:-20,colorTemp:5600},
-    {angle:225,dist:1.5,power:600,modifier:'stripbox',height:195,tilt:-20,colorTemp:5600}]},
-  // ── BEAUTY ────────────────────────────────
-  beauty:{name:'Beauty',icon:'💄',desc:'Мягкий свет, без теней',cat:'beauty',lights:[
-    {angle:0,dist:1.4,power:400,modifier:'octabox90',height:210,tilt:-40,colorTemp:5500},
-    {angle:0,dist:1.3,power:200,modifier:'stripbox',height:75,tilt:35,colorTemp:5500},
-    {angle:180,dist:2.5,power:200,modifier:'umbrella-wt',height:155,tilt:-10,colorTemp:5500}]},
-  beautyDish:{name:'Beauty Dish',icon:'⭕',desc:'Чёткий блик, драматика',cat:'beauty',lights:[
-    {angle:350,dist:1.6,power:500,modifier:'beauty-dish',height:205,tilt:-38,colorTemp:5600},
-    {angle:180,dist:2.8,power:160,modifier:'umbrella-wt',height:150,tilt:-8,colorTemp:5600}]},
-  glamour:{name:'Glamour',icon:'✨',desc:'Ring + заполняющий',cat:'beauty',lights:[
-    {angle:0,dist:1.3,power:350,modifier:'ringlight',height:175,tilt:-5,colorTemp:5400},
-    {angle:0,dist:2.8,power:120,modifier:'octabox90',height:210,tilt:-35,colorTemp:5400}]},
-  // ── CINEMA ────────────────────────────────
-  threepoint:{name:'Три точки',icon:'💡',desc:'Классическая схема',cat:'cinema',lights:[
+  threepoint:{name:'Три точки',icon:'💡',desc:'Классическая схема',cat:'studio',lights:[
     {angle:315,dist:2.0,power:400,modifier:'softbox60',height:180,tilt:-30,colorTemp:5600},
     {angle:225,dist:2.5,power:200,modifier:'umbrella-wt',height:160,tilt:-15,colorTemp:5600},
     {angle:45,dist:2.8,power:300,modifier:'none',height:200,tilt:-20,colorTemp:5800}]},
-  noir:{name:'Film Noir',icon:'🎬',desc:'Одна лампа, резкие тени',cat:'cinema',lights:[
-    {angle:310,dist:2.5,power:700,modifier:'fresnel',height:220,tilt:-45,colorTemp:4200}]},
-  motivated:{name:'Motivated',icon:'🪟',desc:'Свет из «окна» сбоку',cat:'cinema',lights:[
-    {angle:270,dist:2.2,power:500,modifier:'softbox90',height:170,tilt:-15,colorTemp:6500},
-    {angle:90,dist:3.5,power:120,modifier:'umbrella-wt',height:155,tilt:-10,colorTemp:6500},
-    {angle:225,dist:3.0,power:200,modifier:'none',height:185,tilt:-20,colorTemp:5600}]},
-  // ── PRODUCT ───────────────────────────────
-  productHero:{name:'Product Hero',icon:'📦',desc:'Чистый свет на продукт',cat:'product',lights:[
-    {angle:330,dist:1.5,power:400,modifier:'softbox60',height:195,tilt:-35,colorTemp:5500},
-    {angle:150,dist:2.2,power:180,modifier:'umbrella-wt',height:160,tilt:-10,colorTemp:5500},
-    {angle:0,dist:2.8,power:300,modifier:'stripbox',height:80,tilt:25,colorTemp:5500}]},
-  rimProduct:{name:'Rim Product',icon:'🔳',desc:'Контровой + тёмный фон',cat:'product',lights:[
-    {angle:120,dist:1.4,power:500,modifier:'stripbox',height:190,tilt:-15,colorTemp:5600},
-    {angle:240,dist:1.4,power:500,modifier:'stripbox',height:190,tilt:-15,colorTemp:5600},
-    {angle:0,dist:2.5,power:150,modifier:'softbox60',height:175,tilt:-20,colorTemp:5600}]},
 };
 
 // ════════════════════════════════════════════
@@ -1808,161 +1664,20 @@ function applyPreset(key){
 }
 
 function renderPresets(){
-  const cats={portrait:'preset-cards-portrait',fashion:'preset-cards-fashion',
-               beauty:'preset-cards-beauty',cinema:'preset-cards-cinema',product:'preset-cards-product'};
-  Object.values(cats).forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='';});
-
+  const portrait=document.getElementById('preset-cards-portrait');
+  const studio=document.getElementById('preset-cards-studio');
+  portrait.innerHTML='';studio.innerHTML='';
   Object.entries(PRESETS).forEach(([key,p])=>{
-    const containerId=cats[p.cat];
-    if(!containerId)return;
-    const container=document.getElementById(containerId);
-    if(!container)return;
     const d=document.createElement('div');
     d.className='preset-card'+(S.currentPreset===key?' active':'');
     d.dataset.preset=key;
     d.innerHTML=`<div class="preset-card-icon">${p.icon}</div>
       <div class="preset-card-name">${p.name}</div>
       <div class="preset-card-desc">${p.desc}</div>
-      <div class="preset-card-lights">${p.lights.length} источник${p.lights.length===1?'':p.lights.length<5?'а':'ов'}</div>`;
+      <div class="preset-card-lights">${p.lights.length} источник${p.lights.length>1?'а':''}</div>`;
     d.onclick=()=>{applyPreset(key);setScreen('editor')};
-    container.appendChild(d);
+    (p.cat==='portrait'?portrait:studio).appendChild(d);
   });
-  renderUserPresets();
-}
-
-// ════════════════════════════════════════════
-// USER PRESETS (localStorage)
-// ════════════════════════════════════════════
-const USER_PRESETS_KEY='lightcraft_user_presets';
-let _ctxSchemeId=null;
-let _newSchemeIcon='⭐';
-
-function loadUserPresets(){
-  try{return JSON.parse(localStorage.getItem(USER_PRESETS_KEY)||'[]');}
-  catch(e){return[];}
-}
-function saveUserPresets(arr){
-  try{localStorage.setItem(USER_PRESETS_KEY,JSON.stringify(arr));}catch(e){}
-}
-
-function renderUserPresets(){
-  const arr=loadUserPresets();
-  const section=document.getElementById('user-presets-section');
-  const container=document.getElementById('preset-cards-user');
-  if(!section||!container)return;
-  section.style.display=arr.length?'block':'none';
-  container.innerHTML='';
-  arr.forEach((p,i)=>{
-    const d=document.createElement('div');
-    d.className='preset-card preset-card-user'+(S.currentPreset===`user_${i}`?' active':'');
-    d.innerHTML=`<div class="preset-card-icon">${p.icon||'⭐'}</div>
-      <div class="preset-card-name">${p.name}</div>
-      <div class="preset-card-desc">${p.desc||''}</div>
-      <div class="preset-card-lights">${p.lights.length} источник${p.lights.length===1?'':p.lights.length<5?'а':'ов'}</div>
-      <button class="more-btn" onclick="showSchemeCtx(event,${i})">···</button>`;
-    d.addEventListener('click',e=>{
-      if(e.target.closest('.more-btn'))return;
-      applyUserPreset(i);setScreen('editor');
-    });
-    container.appendChild(d);
-  });
-}
-
-function showSaveSchemeModal(){
-  document.getElementById('scheme-name-input').value='';
-  _newSchemeIcon='⭐';
-  document.querySelectorAll('.icon-pick').forEach(el=>{
-    el.classList.toggle('selected',el.dataset.icon==='⭐');
-  });
-  document.getElementById('save-scheme-overlay').classList.add('show');
-  setTimeout(()=>document.getElementById('scheme-name-input').focus(),150);
-}
-
-function pickSchemeIcon(el){
-  document.querySelectorAll('.icon-pick').forEach(e=>e.classList.remove('selected'));
-  el.classList.add('selected');
-  _newSchemeIcon=el.dataset.icon;
-}
-
-function saveSchemeConfirm(){
-  const name=document.getElementById('scheme-name-input').value.trim()||'Моя схема';
-  const arr=loadUserPresets();
-  // Build a light description from the current key light modifier
-  const keyLight=S.lights.reduce((a,b)=>
-    (b.power/(b.dist*b.dist))>(a.power/(a.dist*a.dist))?b:a, S.lights[0]||{power:0,dist:1});
-  const desc=S.lights.length?`${S.lights.length} источник${S.lights.length===1?'':S.lights.length<5?'а':'ов'}`:'-';
-  arr.push({name,icon:_newSchemeIcon,desc,lights:JSON.parse(JSON.stringify(S.lights))});
-  saveUserPresets(arr);
-  closeOverlay('save-scheme-overlay');
-  renderUserPresets();
-  // Brief toast
-  showToast(`«${name}» сохранена`);
-}
-
-function applyUserPreset(idx){
-  const arr=loadUserPresets();
-  const p=arr[idx];
-  if(!p)return;
-  snapshotLights();
-  S.lights=JSON.parse(JSON.stringify(p.lights));
-  // Re-assign IDs to avoid conflicts
-  S.lights.forEach(l=>{l.id=S.nextId++;l.enabled=l.enabled!==false;l.color=l.color||COLORS[Math.floor(Math.random()*COLORS.length)];});
-  S.selectedId=null;
-  S.currentPreset=`user_${idx}`;
-  document.getElementById('preset-pill-name').textContent=p.name;
-  document.getElementById('scheme-tag').textContent=p.name;
-  renderLightsList();renderParamsPane();updateAnalysis();updateEV();drawAll();
-  renderUserPresets();
-}
-
-function showSchemeCtx(e,idx){
-  e.stopPropagation();
-  _ctxSchemeId=idx;
-  const m=document.getElementById('ctx-scheme-menu');
-  const rect=e.target.getBoundingClientRect();
-  m.style.left=Math.min(rect.left,window.innerWidth-170)+'px';
-  m.style.top=(rect.bottom+4)+'px';
-  m.style.display='block';
-  const close=()=>{m.style.display='none';document.removeEventListener('click',close);};
-  setTimeout(()=>document.addEventListener('click',close),10);
-}
-
-function ctxRenameScheme(){
-  const arr=loadUserPresets();
-  const p=arr[_ctxSchemeId];if(!p)return;
-  document.getElementById('rename-scheme-input').value=p.name;
-  document.getElementById('rename-scheme-overlay').classList.add('show');
-  setTimeout(()=>document.getElementById('rename-scheme-input').focus(),150);
-}
-function renameSchemeConfirm(){
-  const arr=loadUserPresets();
-  const name=document.getElementById('rename-scheme-input').value.trim();
-  if(name&&arr[_ctxSchemeId]){arr[_ctxSchemeId].name=name;saveUserPresets(arr);renderUserPresets();}
-  closeOverlay('rename-scheme-overlay');
-}
-function ctxDeleteScheme(){
-  const arr=loadUserPresets();
-  const name=arr[_ctxSchemeId]?.name||'схема';
-  arr.splice(_ctxSchemeId,1);
-  saveUserPresets(arr);
-  renderUserPresets();
-  showToast(`«${name}» удалена`);
-}
-
-// ── Toast notification ──
-function showToast(msg){
-  let t=document.getElementById('_toast');
-  if(!t){
-    t=document.createElement('div');t.id='_toast';
-    t.style.cssText='position:fixed;bottom:calc(var(--nav-h)+var(--safe-bot)+16px);left:50%;transform:translateX(-50%);'+
-      'background:rgba(30,30,45,0.95);color:#e8e8f0;padding:10px 18px;border-radius:12px;'+
-      'font-size:13px;z-index:999;pointer-events:none;backdrop-filter:blur(10px);'+
-      'border:1px solid rgba(255,255,255,0.1);white-space:nowrap;transition:opacity .3s;';
-    document.body.appendChild(t);
-  }
-  t.textContent=msg;t.style.opacity='1';
-  clearTimeout(t._timer);
-  t._timer=setTimeout(()=>{t.style.opacity='0';},2200);
 }
 
 // ════════════════════════════════════════════
